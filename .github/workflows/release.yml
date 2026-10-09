@@ -1,0 +1,50 @@
+# Publication d'une version : quand on envoie une étiquette (tag) de la forme
+# `v0.2.0`, GitHub compile l'installateur Windows et crée la « Release »
+# correspondante, d'où on peut le télécharger.
+#
+#   git tag v0.2.0
+#   git push origin v0.2.0
+#
+# Penser à mettre le même numéro de version dans `package.json`,
+# `src-tauri/Cargo.toml` et `src-tauri/tauri.conf.json` avant.
+name: Publication
+
+on:
+  push:
+    tags: ["v*"]
+
+# Nécessaire pour créer la Release et y déposer l'installateur.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # L'action officielle de Tauri compile l'application, fabrique
+      # l'installateur et le dépose dans la Release.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Dofus Organizer ${{ github.ref_name }}
+          releaseBody: >-
+            Téléchargez l'installateur `Dofus.Organizer_..._x64-setup.exe`
+            ci-dessous, puis lancez-le. Voir la section « Première
+            installation » du README pour le détail.
+          releaseDraft: false
+          prerelease: false
