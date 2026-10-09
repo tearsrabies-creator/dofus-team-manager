@@ -4,7 +4,7 @@
 
 [package]
 name = "dofus-team-manager"
-version = "0.2.0"
+version = "0.3.0"
 description = "Gestionnaire d'équipe multicompte pour Dofus : navigation entre fenêtres et invitations de groupe"
 authors = ["Contributeurs de Dofus Team Manager"]
 edition = "2021"
@@ -47,6 +47,7 @@ windows = { version = "0.61", features = [
   "Win32_UI_Input_KeyboardAndMouse",  # SendInput, RegisterHotKey, état des touches
   "Win32_UI_Accessibility",           # SetWinEventHook (être prévenu des changements de premier plan)
 ] }
+tauri-plugin-updater = "2"
 
 # Réglages de la version finale (`npm run tauri build`) : un exécutable plus
 # petit et plus rapide, au prix d'une compilation plus longue.

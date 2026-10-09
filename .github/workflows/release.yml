@@ -35,10 +35,13 @@ jobs:
       - run: npm ci
 
       # L'action officielle de Tauri compile l'application, fabrique
-      # l'installateur et le dépose dans la Release.
+      # l'installateur et le dépose dans la Release, avec `latest.json` et la
+      # signature que l'application consulte pour se mettre à jour.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Clé privée qui signe les mises à jour (secret du dépôt GitHub).
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: Dofus Team Manager ${{ github.ref_name }}

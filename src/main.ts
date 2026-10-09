@@ -386,9 +386,34 @@ async function save(): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Mise à jour
+// ---------------------------------------------------------------------------
+
+/** Montre le bandeau « nouvelle version prête » (voir updater.rs). */
+function showUpdate(version: string): void {
+  el("update-version").textContent = version;
+  el("update-banner").hidden = false;
+}
+
+/** Installe la nouvelle version : l'application se ferme puis se relance. */
+async function installUpdate(): Promise<void> {
+  const button = el("update-button") as HTMLButtonElement;
+  button.disabled = true;
+  button.textContent = "Installation…";
+  try {
+    await invoke("install_update");
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = "Redémarrer et mettre à jour";
+    showErrors([`La mise à jour a échoué : ${String(error)}`]);
+  }
+}
+
 /** Branche les boutons et cases de la page sur leurs actions. */
 function bindControls(): void {
   el("copy-invites").addEventListener("click", handler(onCopyInvites));
+  el("update-button").addEventListener("click", handler(installUpdate));
   el("help-button").addEventListener("click", toggleHelp);
   el("theme-button").addEventListener("click", toggleTheme);
   el("pause-button").addEventListener("click", () => fireAndForget(invoke("toggle_pause")));
@@ -422,6 +447,8 @@ async function listenToRust(): Promise<void> {
   await listen("foreground-changed", () => {
     if (!document.hidden) fireAndForget(refresh());
   });
+  // Une nouvelle version a été téléchargée en arrière-plan.
+  await listen<string>("update-ready", (event) => showUpdate(event.payload));
   // Les raccourcis ont été coupés / réactivés (par le raccourci ou le bandeau).
   await listen<boolean>("shortcuts-paused-changed", (event) =>
     renderPauseButton(el("pause-button"), event.payload),
@@ -469,6 +496,9 @@ async function start(): Promise<void> {
   await watchMinimize();
   refreshWhileVisible(() => fireAndForget(refresh()), REFRESH_INTERVAL_MS);
   await listenToRust();
+  // La mise à jour a pu être prête avant qu'on écoute l'événement.
+  const pending = await invoke<string | null>("pending_update");
+  if (pending) showUpdate(pending);
 }
 
 window.addEventListener("DOMContentLoaded", handler(start));

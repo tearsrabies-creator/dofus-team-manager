@@ -11,7 +11,8 @@
 //! - `combo`        : lire une combinaison de touches, logique pure et testée ;
 //! - `input`        : l'écoute du clavier, sur son propre thread ;
 //! - `clipboard`    : écrire dans le presse-papiers ;
-//! - `commands`     : les commandes appelables par l'interface.
+//! - `commands`     : les commandes appelables par l'interface ;
+//! - `updater`      : la mise à jour automatique.
 //!
 //! Légèreté : rien ne tourne en boucle côté Rust. Le programme ne se réveille
 //! que pour un raccourci, un changement de premier plan ou une demande de
@@ -27,6 +28,7 @@ mod game_windows;
 mod input;
 mod navigation;
 mod shortcuts;
+mod updater;
 
 use serde::Serialize;
 use std::path::PathBuf;
@@ -211,6 +213,8 @@ pub(crate) fn on_foreground_changed(app: &AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Le plugin officiel de mise à jour (voir updater.rs).
+        .plugin(tauri_plugin_updater::Builder::new().build())
         // `setup` s'exécute une fois au démarrage, sur le thread principal.
         .setup(|app| {
             let config_dir = app.path().app_config_dir()?;
@@ -226,12 +230,15 @@ pub fn run() {
                 config_path,
                 control: Mutex::new(Control::default()),
             });
+            app.manage(updater::PendingUpdate::default());
             // Le thread qui écoute le clavier (voir input.rs).
             input::start(app.handle().clone());
             // On part de la fenêtre actuellement au premier plan, puis on
             // demande à Windows de nous prévenir de chaque changement.
             on_foreground_changed(app.handle());
             foreground::watch(app.handle().clone());
+            // Cherche une nouvelle version en arrière-plan (version installée seulement).
+            updater::check_in_background(app.handle());
             Ok(())
         })
         // Fermer la fenêtre principale (croix de l'en-tête, Alt+F4...) quitte
@@ -253,7 +260,9 @@ pub fn run() {
             commands::toggle_pause,
             commands::is_paused,
             commands::activate_window,
-            commands::copy_text
+            commands::copy_text,
+            commands::pending_update,
+            commands::install_update
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application");

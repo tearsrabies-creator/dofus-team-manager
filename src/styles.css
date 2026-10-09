@@ -383,6 +383,23 @@ input.shortcut:focus {
   margin-top: 6px;
 }
 
+/* Bandeau « nouvelle version prête » (fenêtre principale). */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--active);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+
+/* `hidden` doit l'emporter sur le `display: flex` ci-dessus. */
+.update-banner[hidden] {
+  display: none;
+}
+
 /* ============================ Bandeau ============================ */
 
 .pip {

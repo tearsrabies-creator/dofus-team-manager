@@ -18,7 +18,7 @@
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::config::Config;
-use crate::{clipboard, game_windows, shortcuts, AppState, GameWindow};
+use crate::{clipboard, game_windows, shortcuts, updater, AppState, GameWindow};
 
 /// Liste les fenêtres de jeu pour l'affichage.
 #[tauri::command]
@@ -108,4 +108,18 @@ pub fn copy_text(app: AppHandle, text: String) -> Result<(), String> {
         .map(|hwnd| hwnd.0 as isize)
         .ok_or("Fenêtre principale introuvable.")?;
     clipboard::copy_text(&text, owner)
+}
+
+/// Le numéro de la nouvelle version déjà téléchargée, s'il y en a une
+/// (l'interface le demande au démarrage, au cas où l'événement `update-ready`
+/// serait arrivé avant qu'elle ne l'écoute).
+#[tauri::command]
+pub fn pending_update(app: AppHandle) -> Option<String> {
+    updater::ready_version(&app)
+}
+
+/// Installe la nouvelle version : l'application se ferme puis se relance.
+#[tauri::command]
+pub fn install_update(app: AppHandle) -> Result<(), String> {
+    updater::install(&app)
 }

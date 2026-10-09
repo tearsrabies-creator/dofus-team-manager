@@ -24,8 +24,9 @@ Projet de fan, non officiel, sans lien avec Ankama.
 
 Configuration requise : Windows 10 ou 11 (64 bits). L'application s'appuie sur WebView2, déjà présent sur ces systèmes ; s'il manquait, l'installateur le télécharge.
 
-**Mettre à jour** : téléchargez et lancez l'installateur de la nouvelle version ; vos réglages sont conservés.
-**Vous aviez « Dofus Organizer » 0.1.0 ?** C'est l'ancien nom de l'application : installez Dofus Team Manager, qui reprend vos réglages automatiquement, puis désinstallez Dofus Organizer.
+**Mises à jour** : à partir de la version 0.3.0, l'application vérifie à chaque lancement s'il existe une nouvelle version, la télécharge en arrière-plan, puis propose « Redémarrer et mettre à jour » : un clic suffit, vos réglages sont conservés. Elle n'installe jamais rien sans votre accord (l'installation ferme l'application, ce qui serait gênant en pleine partie). Pour passer d'une version plus ancienne à la 0.3.0, installez-la une fois à la main.
+
+**Anciennes versions** : l'installateur remplace la version déjà installée. Il désinstalle aussi automatiquement « Dofus Organizer », l'ancien nom de l'application (0.1.0), dont les réglages sont repris.
 **Désinstaller** : Paramètres Windows > Applications > Dofus Team Manager > Désinstaller.
 
 ## Ne pas gêner le jeu
@@ -80,7 +81,16 @@ cargo test                    # tests automatiques de la partie Rust
    git push origin v0.2.0
    ```
 
-GitHub compile alors l'installateur et crée la Release (`.github/workflows/release.yml`). Pour fabriquer l'installateur sur sa machine : `npm run tauri build` (résultat dans `src-tauri/target/release/bundle/nsis/`).
+GitHub compile alors l'installateur, le signe et crée la Release avec le fichier `latest.json` que consultent les applications installées pour se mettre à jour (`.github/workflows/release.yml`).
+
+**Clé de signature des mises à jour** : chaque mise à jour est signée, et l'application refuse d'installer une version qui ne l'est pas avec la bonne clé. La clé publique est dans `src-tauri/tauri.conf.json` ; la clé privée est un secret du dépôt GitHub (`TAURI_SIGNING_PRIVATE_KEY`) et reste aussi, hors du dépôt, dans `%USERPROFILE%\.tauri\dofus-team-manager.key`. **Sauvegardez ce fichier** : sans lui, plus aucune mise à jour automatique ne pourrait être publiée pour les installations existantes.
+
+Pour fabriquer l'installateur sur sa machine, la clé privée doit être fournie :
+
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$env:USERPROFILE\.tauri\dofus-team-manager.key" -Raw
+npm run tauri build   # résultat dans src-tauri/target/release/bundle/nsis/
+```
 
 ## Comment c'est construit
 
@@ -110,6 +120,8 @@ Le code (noms de fichiers, de variables, de fonctions) est en anglais ; les comm
 | `src-tauri/src/shortcuts.rs`               | Les actions des raccourcis et la règle qui décide lesquels sont actifs.                                                            |
 | `src-tauri/src/input.rs`                   | L'écoute du clavier sur son propre thread : raccourcis Windows ou crochet clavier.                                                 |
 | `src-tauri/src/clipboard.rs`               | Écrire dans le presse-papiers (marche aussi depuis le bandeau, qui n'a jamais le focus).                                           |
+| `src-tauri/src/updater.rs`                 | La mise à jour automatique (vérification, téléchargement, installation).                                                           |
+| `src-tauri/windows/hooks.nsh`              | Ajout à l'installateur Windows : désinstalle l'ancienne « Dofus Organizer ».                                                       |
 | `src-tauri/src/commands.rs`                | Les commandes appelables par l'interface.                                                                                          |
 | `src-tauri/src/lib.rs`                     | L'état partagé, les actions, et le démarrage qui relie le tout.                                                                    |
 | `src/common.ts`                            | Ce qui sert aux deux fenêtres : types, invitations, couronne, préférences, taille automatique.                                     |
