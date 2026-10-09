@@ -3,10 +3,10 @@
 # comment compiler le programme et quelles bibliothèques (« crates ») télécharger.
 
 [package]
-name = "dofus-organizer"
-version = "0.1.0"
-description = "Organizer multicompte pour Dofus : navigation entre fenêtres et invitations de groupe"
-authors = ["Contributeurs de Dofus Organizer"]
+name = "dofus-team-manager"
+version = "0.2.0"
+description = "Gestionnaire d'équipe multicompte pour Dofus : navigation entre fenêtres et invitations de groupe"
+authors = ["Contributeurs de Dofus Team Manager"]
 edition = "2021"
 # Version minimale de Rust : le code utilise `&raw mut` (Rust 1.82).
 rust-version = "1.82"
@@ -16,7 +16,7 @@ rust-version = "1.82"
 # que le petit main.rs se contente d'appeler.
 # Le suffixe `_lib` évite un conflit de nom avec l'exécutable sous Windows,
 # voir https://github.com/rust-lang/cargo/issues/8519
-name = "dofus_organizer_lib"
+name = "dofus_team_manager_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

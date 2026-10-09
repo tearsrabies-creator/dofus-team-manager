@@ -3,12 +3,12 @@
 //! Plutôt que de demander « quelle fenêtre est devant ? » en boucle (ce qui
 //! consommerait un peu de processeur en permanence), on demande à Windows de
 //! nous appeler à chaque changement, avec `SetWinEventHook`. Entre deux
-//! changements, l'organizer ne fait strictement rien.
+//! changements, l'application ne fait strictement rien.
 //!
 //! Le mode « hors contexte » (`WINEVENT_OUTOFCONTEXT`) est le plus sûr : rien
 //! n'est injecté dans les autres programmes, Windows nous envoie simplement
 //! un message. Il arrive sur le thread qui a installé la surveillance (le
-//! thread principal), via sa boucle de messages. Si l'organizer s'arrête ou
+//! thread principal), via sa boucle de messages. Si l'application s'arrête ou
 //! plante, Windows retire la surveillance tout seul.
 
 use std::sync::OnceLock;

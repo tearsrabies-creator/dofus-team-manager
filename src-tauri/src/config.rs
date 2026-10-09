@@ -2,7 +2,7 @@
 //! cochées, chef de groupe et raccourcis clavier.
 //!
 //! Elle est stockée en JSON dans le dossier de configuration de l'application,
-//! sous Windows : `%APPDATA%\com.dofusorganizer.desktop\config.json`.
+//! sous Windows : `%APPDATA%\com.dofusteammanager.desktop\config.json`.
 //! On peut l'ouvrir avec un éditeur de texte pour voir à quoi elle ressemble.
 
 use serde::{Deserialize, Serialize};
@@ -95,6 +95,21 @@ impl Config {
             .unwrap_or_default()
     }
 
+    /// Lit la configuration depuis `path` ; si elle n'existe pas encore,
+    /// reprend celle de `previous` (le fichier d'un ancien nom de
+    /// l'application) et l'enregistre au nouvel emplacement. Ainsi, un
+    /// changement de nom ne fait perdre aucun réglage.
+    pub fn load_or_migrate(path: &Path, previous: &Path) -> Config {
+        if !path.exists() && previous.exists() {
+            let config = Config::load(previous);
+            // En cas d'échec, on garde quand même la configuration lue : elle
+            // sera écrite au nouvel emplacement à la prochaine modification.
+            let _ = config.save(path);
+            return config;
+        }
+        Config::load(path)
+    }
+
     /// Écrit la configuration dans `path` (en créant le dossier si besoin).
     /// L'opérateur `?` arrête la fonction et renvoie l'erreur si une étape échoue.
     pub fn save(&self, path: &Path) -> Result<(), String> {
@@ -140,6 +155,34 @@ mod tests {
         assert_eq!(config.selection, vec!["Joueur-2".to_string()]);
         // Une deuxième fois, rien ne change.
         assert!(!config.add_new_characters(&["Joueur-2".into()]));
+    }
+
+    #[test]
+    fn previous_config_migrated_once() {
+        // Un dossier de travail temporaire, propre à ce test.
+        let folder = std::env::temp_dir().join(format!("dtm-test-{}", std::process::id()));
+        let previous = folder.join("ancien").join("config.json");
+        let path = folder.join("nouveau").join("config.json");
+        let old = Config {
+            leader: Some("Joueur1".into()),
+            ..Default::default()
+        };
+        old.save(&previous).unwrap();
+
+        // Pas encore de nouvelle configuration : on reprend l'ancienne...
+        let migrated = Config::load_or_migrate(&path, &previous);
+        assert_eq!(migrated.leader.as_deref(), Some("Joueur1"));
+        assert!(path.exists());
+        // ... puis, la fois suivante, c'est la nouvelle qui compte.
+        let newer = Config {
+            leader: Some("Joueur-2".into()),
+            ..Default::default()
+        };
+        newer.save(&path).unwrap();
+        let reloaded = Config::load_or_migrate(&path, &previous);
+        assert_eq!(reloaded.leader.as_deref(), Some("Joueur-2"));
+
+        let _ = fs::remove_dir_all(folder);
     }
 
     #[test]

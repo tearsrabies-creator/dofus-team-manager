@@ -18,9 +18,9 @@
 //!
 //! Pour ne jamais gêner le jeu :
 //! - aucune fonction utilisée ici n'attend de réponse de la fenêtre Dofus :
-//!   même si le jeu est figé, l'organizer ne reste pas bloqué ;
+//!   même si le jeu est figé, l'application ne reste pas bloquée ;
 //! - le seul objet ouvert (le processus, pour lire son nom) est refermé
-//!   aussitôt ; si l'organizer plante, il ne reste rien d'ouvert sur le jeu ;
+//!   aussitôt ; si l'application plante, il ne reste rien d'ouvert sur le jeu ;
 //! - on ne fait QUE de la gestion de fenêtres : aucune lecture de la mémoire
 //!   du jeu, aucune injection, aucune lecture du réseau.
 
@@ -93,7 +93,7 @@ pub fn foreground() -> isize {
     unsafe { GetForegroundWindow().0 as isize }
 }
 
-/// Vrai si la fenêtre `id` appartient à l'organizer lui-même ou à un client
+/// Vrai si la fenêtre `id` appartient à l'application elle-même ou à un client
 /// Dofus : c'est seulement dans ces cas que nos raccourcis sont actifs.
 pub fn is_allowed_foreground(id: isize) -> bool {
     if id == 0 {

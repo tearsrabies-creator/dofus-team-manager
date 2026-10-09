@@ -10,16 +10,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dofus Organizer — bandeau</title>
+    <title>Dofus Team Manager — bandeau</title>
     <link rel="stylesheet" href="/src/styles.css" />
     <script type="module" src="/src/pip.ts" defer></script>
   </head>
 
   <body>
-    <div id="root" class="pip">
-      <!-- `data-tauri-drag-region` : tirer sur cet élément déplace la fenêtre
-           (il n'y a pas de barre de titre pour le faire). -->
-      <span class="grip" data-tauri-drag-region title="Déplacer le bandeau">⠿</span>
+    <!-- `data-tauri-drag-region="deep"` : on déplace le bandeau en le
+         saisissant n'importe où sauf sur un bouton ; la poignée ⠿ est la
+         prise la plus visible. -->
+    <div id="root" class="pip" data-tauri-drag-region="deep">
+      <span class="grip" title="Déplacer le bandeau">⠿</span>
       <div id="characters" class="characters"></div>
       <button id="invite-button" class="small" type="button">👥</button>
       <button id="pause-button" class="small" type="button">⏸</button>
@@ -27,8 +28,8 @@
         id="restore-button"
         class="small"
         type="button"
-        title="Afficher l'organizer"
-        aria-label="Afficher l'organizer"
+        title="Afficher l'application"
+        aria-label="Afficher l'application"
       >
         ⤢
       </button>

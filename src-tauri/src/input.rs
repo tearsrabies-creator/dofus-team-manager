@@ -17,7 +17,7 @@
 //! Quand un raccourci est reconnu, l'action est confiée au thread principal
 //! sans l'attendre (`run_on_main_thread`).
 //!
-//! Si l'organizer plante, Windows retire le crochet et libère les raccourcis
+//! Si l'application plante, Windows retire le crochet et libère les raccourcis
 //! tout seul : rien ne reste bloqué sur le jeu.
 
 use std::cell::RefCell;

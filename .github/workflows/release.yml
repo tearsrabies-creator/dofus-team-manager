@@ -41,9 +41,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: Dofus Organizer ${{ github.ref_name }}
+          releaseName: Dofus Team Manager ${{ github.ref_name }}
           releaseBody: >-
-            Téléchargez l'installateur `Dofus.Organizer_..._x64-setup.exe`
+            Téléchargez l'installateur `Dofus.Team.Manager_..._x64-setup.exe`
             ci-dessous, puis lancez-le. Voir la section « Première
             installation » du README pour le détail.
           releaseDraft: false

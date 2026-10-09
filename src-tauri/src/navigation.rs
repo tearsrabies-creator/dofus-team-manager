@@ -1,4 +1,4 @@
-//! Logique « pure » de l'organizer : aucune dépendance à Windows ici.
+//! Logique « pure » de l'application : aucune dépendance à Windows ici.
 //!
 //! Les fonctions de ce fichier prennent des données en entrée et rendent un
 //! résultat, sans rien toucher d'autre. C'est ce qui permet de les tester
@@ -99,7 +99,7 @@ pub enum Direction {
 ///
 /// - `len` : le nombre de fenêtres dans la liste de navigation ;
 /// - `current` : la position de la fenêtre au premier plan, si elle fait
-///   partie de la liste (`None` sinon, par exemple si on est sur l'organizer).
+///   partie de la liste (`None` sinon, par exemple si on est sur l'application).
 ///
 /// Rend `None` quand il n'y a rien à faire (liste vide).
 pub fn target(direction: Direction, len: usize, current: Option<usize>) -> Option<usize> {

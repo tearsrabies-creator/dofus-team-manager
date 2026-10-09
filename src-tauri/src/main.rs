@@ -4,5 +4,5 @@
 
 // Le vrai code est dans lib.rs ; `main` se contente de le lancer.
 fn main() {
-    dofus_organizer_lib::run();
+    dofus_team_manager_lib::run();
 }

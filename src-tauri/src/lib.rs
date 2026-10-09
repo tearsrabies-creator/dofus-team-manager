@@ -36,6 +36,11 @@ use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 use config::Config;
 use shortcuts::{Action, Control};
 
+/// L'identifiant de l'application avant son changement de nom (version
+/// 0.1.0, « Dofus Organizer ») : c'est aussi le nom de son ancien dossier de
+/// configuration.
+const PREVIOUS_IDENTIFIER: &str = "com.dofusorganizer.desktop";
+
 /// L'état partagé de l'application, accessible depuis toutes les commandes.
 ///
 /// Plusieurs morceaux du programme peuvent vouloir lire ou modifier ces
@@ -182,7 +187,7 @@ pub(crate) fn toggle_pause(app: &AppHandle) -> bool {
 /// Appelée (par foreground.rs) à chaque changement de premier plan.
 ///
 /// On ne se fie pas à la fenêtre transmise par l'événement : quand on clique
-/// dans l'organizer, Windows signale parfois une fenêtre interne du moteur
+/// dans l'application, Windows signale parfois une fenêtre interne du moteur
 /// d'affichage (`WebView2`), qui appartient à un autre processus
 /// (`msedgewebview2.exe`). On redemande donc la vraie fenêtre au premier plan.
 pub(crate) fn on_foreground_changed(app: &AppHandle) {
@@ -208,10 +213,16 @@ pub fn run() {
     tauri::Builder::default()
         // `setup` s'exécute une fois au démarrage, sur le thread principal.
         .setup(|app| {
-            let config_path = app.path().app_config_dir()?.join("config.json");
+            let config_dir = app.path().app_config_dir()?;
+            let config_path = config_dir.join("config.json");
+            // L'application s'appelait « Dofus Organizer » jusqu'à la 0.1.0 :
+            // on reprend sa configuration si elle existe (voir config.rs).
+            let previous_path = config_dir
+                .with_file_name(PREVIOUS_IDENTIFIER)
+                .join("config.json");
             // `manage` confie l'état à Tauri, qui le fournira aux commandes.
             app.manage(AppState {
-                config: Mutex::new(Config::load(&config_path)),
+                config: Mutex::new(Config::load_or_migrate(&config_path, &previous_path)),
                 config_path,
                 control: Mutex::new(Control::default()),
             });

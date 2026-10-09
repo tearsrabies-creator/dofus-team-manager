@@ -1,14 +1,14 @@
-# Dofus Organizer
+# Dofus Team Manager
 
-Petit organizer multicompte pour Dofus (Windows), inspiré du module Organizer de nAiO :
+Petit gestionnaire d'équipe multicompte pour Dofus (Windows), inspiré du module Organizer de nAiO :
 
 - détecte les fenêtres Dofus ouvertes et reconnaît le personnage et sa classe grâce au titre de la fenêtre, avec le symbole de la classe ;
 - permet de **cocher** les fenêtres entre lesquelles on navigue, et de choisir leur **ordre** en glissant les lignes par leur poignée ⠿ (gardé d'une session à l'autre) ;
-- **raccourcis clavier globaux**, avec n'importe quelle combinaison (Ctrl + Alt + P…) : fenêtre suivante et précédente (parmi les fenêtres cochées), un raccourci facultatif par personnage, et un **interrupteur** qui coupe ou réactive tous les autres. Ils ne sont actifs que quand une fenêtre Dofus ou l'organizer est au premier plan. Une option avancée permet de **distinguer gauche et droite** (Alt G / Alt D, Ctrl G / Ctrl D…) ;
+- **raccourcis clavier globaux**, avec n'importe quelle combinaison (Ctrl + Alt + P…) : fenêtre suivante et précédente (parmi les fenêtres cochées), un raccourci facultatif par personnage, et un **interrupteur** qui coupe ou réactive tous les autres. Ils ne sont actifs que quand une fenêtre Dofus ou l'application est au premier plan. Une option avancée permet de **distinguer gauche et droite** (Alt G / Alt D, Ctrl G / Ctrl D…) ;
 - une **couronne 👑** unique à donner au chef de groupe ;
 - bouton **« Copier les invitations »** : met dans le presse-papiers `/invite Perso2; /invite Perso3…` (toutes les fenêtres cochées sauf le chef) pour former le groupe. Sans couronne, le personnage dont la fenêtre Dofus est au premier plan la reçoit ;
-- un **bandeau** toujours au premier plan, à placer dans un coin : un clic sur un pseudo affiche sa fenêtre, la couronne (au survol) en fait le chef, 👥 copie les invitations de groupe, ⏸ coupe les raccourcis, ⤢ fait revenir l'organizer. Il peut s'ouvrir automatiquement quand on masque l'organizer ;
-- une fenêtre sans cadre Windows qui prend juste la taille de son contenu (on la déplace par son en-tête), des textes d'aide qu'on peut masquer (?), un thème clair ou sombre.
+- un **bandeau** toujours au premier plan, à placer dans un coin : un clic sur un pseudo affiche sa fenêtre, la couronne (au survol) en fait le chef, 👥 copie les invitations de groupe, ⏸ coupe les raccourcis, ⤢ fait revenir l'application. Il peut s'ouvrir automatiquement quand on masque l'application ;
+- une fenêtre sans cadre Windows qui prend juste la taille de son contenu (on la déplace en la saisissant n'importe où, hors boutons et champs), des textes d'aide qu'on peut masquer (?), un thème clair ou sombre.
 
 Ce que l'outil ne fait **pas**, volontairement : pas de connexion des comptes, pas de lecture de la mémoire du jeu, pas d'injection, pas de lecture du réseau. Il gère seulement des fenêtres Windows, comme nAiO.
 
@@ -16,34 +16,35 @@ Projet de fan, non officiel, sans lien avec Ankama.
 
 ## Première installation
 
-1. Ouvrez la page des versions : <https://github.com/tearsrabies-creator/dofus-organizer/releases/latest>.
-2. Dans la partie **Assets**, téléchargez l'installateur `Dofus.Organizer_<version>_x64-setup.exe`.
+1. Ouvrez la page des versions : <https://github.com/tearsrabies-creator/dofus-team-manager/releases/latest>.
+2. Dans la partie **Assets**, téléchargez l'installateur `Dofus.Team.Manager_<version>_x64-setup.exe`.
 3. Lancez-le. L'installation se fait pour votre compte Windows uniquement : elle ne demande pas de droits d'administrateur.
 4. **Avertissement de Windows** (« Windows a protégé votre ordinateur ») : l'installateur n'est pas signé numériquement, ce qui est normal pour un petit projet. Cliquez sur **Informations complémentaires**, puis sur **Exécuter quand même**.
-5. Lancez **Dofus Organizer** depuis le menu Démarrer.
+5. Lancez **Dofus Team Manager** depuis le menu Démarrer.
 
 Configuration requise : Windows 10 ou 11 (64 bits). L'application s'appuie sur WebView2, déjà présent sur ces systèmes ; s'il manquait, l'installateur le télécharge.
 
 **Mettre à jour** : téléchargez et lancez l'installateur de la nouvelle version ; vos réglages sont conservés.
-**Désinstaller** : Paramètres Windows > Applications > Dofus Organizer > Désinstaller.
+**Vous aviez « Dofus Organizer » 0.1.0 ?** C'est l'ancien nom de l'application : installez Dofus Team Manager, qui reprend vos réglages automatiquement, puis désinstallez Dofus Organizer.
+**Désinstaller** : Paramètres Windows > Applications > Dofus Team Manager > Désinstaller.
 
 ## Ne pas gêner le jeu
 
-- **Rien ne tourne en boucle** côté Rust : Windows prévient l'organizer quand la fenêtre au premier plan change (`SetWinEventHook`), et il ne fait rien d'autre entre deux événements.
+- **Rien ne tourne en boucle** côté Rust : Windows prévient l'application quand la fenêtre au premier plan change (`SetWinEventHook`), et elle ne fait rien d'autre entre deux événements.
 - L'interface ne relit la liste des fenêtres **que si elle est visible** : réduite ou cachée, elle ne fait rien.
 - **Aucun appel ne peut rester bloqué** sur une fenêtre Dofus figée : on lit les titres avec `InternalGetWindowText` et on restaure une fenêtre avec `ShowWindowAsync`, qui n'attendent pas de réponse du jeu.
 - **En cas de plantage**, il ne reste rien d'ouvert : le seul objet ouvert (pour lire le nom d'un processus) est refermé aussitôt, et Windows libère seul les raccourcis, le crochet clavier et la surveillance du premier plan.
-- Le clavier est écouté sur **son propre thread** : même si l'interface est occupée, la frappe n'est jamais ralentie. Par défaut, ce sont les raccourcis Windows (`RegisterHotKey`). Avec l'option « distinguer gauche et droite », c'est un crochet clavier (`WH_KEYBOARD_LL`), installé seulement quand Dofus ou l'organizer est au premier plan, et qui laisse passer toutes les touches sauf nos combinaisons.
+- Le clavier est écouté sur **son propre thread** : même si l'interface est occupée, la frappe n'est jamais ralentie. Par défaut, ce sont les raccourcis Windows (`RegisterHotKey`). Avec l'option « distinguer gauche et droite », c'est un crochet clavier (`WH_KEYBOARD_LL`), installé seulement quand Dofus ou l'application est au premier plan, et qui laisse passer toutes les touches sauf nos combinaisons.
 
 ## Configuration
 
-Fichier : `%APPDATA%\com.dofusorganizer.desktop\config.json` (ordre, cases cochées, chef, raccourcis). On peut le lire et le modifier à la main, application fermée. Les fichiers des premières versions (clés en français) sont toujours relus.
+Fichier : `%APPDATA%\com.dofusteammanager.desktop\config.json` (ordre, cases cochées, chef, raccourcis). On peut le lire et le modifier à la main, application fermée. Les fichiers des premières versions (clés en français) sont toujours relus.
 
 Les préférences d'affichage (thème, aide, position du bandeau, ouverture automatique du bandeau) sont gardées à part, dans le stockage du navigateur intégré.
 
 Les raccourcis s'écrivent avec les noms de touches du web, séparés par `+` : des modificateurs (`Control`, `Alt`, `Shift`, `Super`, ou avec un côté : `ControlLeft`, `AltRight`, `ShiftLeft`, `MetaRight`…), puis une touche (`Tab`, `KeyP`, `Digit1`, `F2`, `ArrowRight`, `Backquote` pour la touche ²…). Exemple : `ControlLeft+Alt+KeyP`.
 
-La touche est désignée par sa **position physique** (nom QWERTY) : `KeyQ` est la touche qui porte un A sur un clavier AZERTY. L'organizer la traduit selon la disposition active, et l'interface affiche ce qui est écrit sur la touche (comme sur un clavier AZERTY si la disposition ne peut pas être lue).
+La touche est désignée par sa **position physique** (nom QWERTY) : `KeyQ` est la touche qui porte un A sur un clavier AZERTY. L'application la traduit selon la disposition active, et l'interface affiche ce qui est écrit sur la touche (comme sur un clavier AZERTY si la disposition ne peut pas être lue).
 
 ## Développer
 

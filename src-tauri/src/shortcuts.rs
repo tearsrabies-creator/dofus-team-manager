@@ -3,7 +3,7 @@
 //!
 //! Un raccourci actif « réserve » sa combinaison : les autres programmes ne
 //! la reçoivent plus. C'est pourquoi on ne garde nos raccourcis actifs QUE
-//! lorsque Dofus ou l'organizer est au premier plan : partout ailleurs
+//! lorsque Dofus ou l'application est au premier plan : partout ailleurs
 //! (navigateur, Discord...), les touches retrouvent leur effet normal.
 //!
 //! L'écoute du clavier elle-même est faite par `input.rs`.
@@ -35,7 +35,7 @@ pub enum Action {
 /// Quels raccourcis doivent être actifs en ce moment.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Mode {
-    /// Aucun : ni Dofus ni l'organizer au premier plan, ou saisie en cours.
+    /// Aucun : ni Dofus ni l'application au premier plan, ou saisie en cours.
     Off,
     /// Seulement l'interrupteur : les autres raccourcis sont coupés.
     ToggleOnly,
@@ -50,7 +50,7 @@ pub struct Control {
     pub capturing: bool,
     /// Vrai quand l'utilisateur a coupé les raccourcis avec l'interrupteur.
     pub paused: bool,
-    /// Vrai quand Dofus ou l'organizer est au premier plan.
+    /// Vrai quand Dofus ou l'application est au premier plan.
     pub foreground_allowed: bool,
     /// Le mode actuellement appliqué (`None` au démarrage).
     pub applied: Option<Mode>,
@@ -168,7 +168,7 @@ mod tests {
     // `..Default::default()` : les champs non cités prennent leur valeur par
     // défaut (ici `false` et `None`).
     #[test]
-    fn nothing_outside_dofus_and_organizer() {
+    fn nothing_outside_dofus_and_app() {
         let control = Control {
             foreground_allowed: false,
             ..Default::default()

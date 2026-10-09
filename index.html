@@ -9,18 +9,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dofus Organizer</title>
+    <title>Dofus Team Manager</title>
     <link rel="stylesheet" href="/src/styles.css" />
     <script type="module" src="/src/main.ts" defer></script>
   </head>
 
   <body>
-    <main id="root" class="main">
-      <!-- La fenêtre n'a pas de cadre Windows : l'en-tête sert de barre de
-           titre. `data-tauri-drag-region` permet de la déplacer en le tirant
-           (sur l'en-tête et le titre eux-mêmes, pas sur les boutons). -->
-      <header data-tauri-drag-region>
-        <h1 data-tauri-drag-region>Dofus Organizer</h1>
+    <!-- La fenêtre n'a pas de cadre Windows. `data-tauri-drag-region="deep"` :
+         on la déplace en la saisissant n'importe où, sauf sur les éléments
+         interactifs (boutons, cases, champs, libellés), que Tauri exclut
+         tout seul. -->
+    <main id="root" class="main" data-tauri-drag-region="deep">
+      <header>
+        <h1>Dofus Team Manager</h1>
         <div class="tools">
           <button
             id="help-button"
@@ -63,8 +64,8 @@
             id="close-button"
             class="small close"
             type="button"
-            title="Quitter l'organizer"
-            aria-label="Quitter l'organizer"
+            title="Quitter l'application"
+            aria-label="Quitter l'application"
           >
             ✕
           </button>
@@ -98,10 +99,11 @@
       <section>
         <h2>Raccourcis</h2>
         <p class="help">
-          Ils ne marchent que quand une fenêtre Dofus ou l'organizer est au premier plan : ailleurs,
-          les touches gardent leur effet normal. Pour en définir un, ici ou dans la liste : cliquez
-          dans le champ puis appuyez sur la combinaison voulue (Échap pour annuler). L'interrupteur
-          (ou le bouton ⏸) coupe tous les autres raccourcis jusqu'à ce qu'on le presse à nouveau.
+          Ils ne marchent que quand une fenêtre Dofus ou l'application est au premier plan :
+          ailleurs, les touches gardent leur effet normal. Pour en définir un, ici ou dans la liste
+          : cliquez dans le champ puis appuyez sur la combinaison voulue (Échap pour annuler).
+          L'interrupteur (ou le bouton ⏸) coupe tous les autres raccourcis jusqu'à ce qu'on le
+          presse à nouveau.
         </p>
         <div id="shortcuts" class="shortcuts"></div>
         <ul id="errors" class="errors" aria-live="polite"></ul>
@@ -111,11 +113,12 @@
         <h2>Bandeau</h2>
         <p class="help">
           Un petit bandeau toujours visible, à placer dans un coin de l'écran : un clic sur un
-          pseudo affiche sa fenêtre, ⤢ fait revenir l'organizer. On le déplace en tirant sur ⠿.
+          pseudo affiche sa fenêtre, ⤢ fait revenir l'application. On le déplace en le saisissant
+          (par exemple par ⠿).
         </p>
         <label class="option">
           <input id="pip-on-minimize" type="checkbox" />
-          Afficher le bandeau quand l'organizer est masqué
+          Afficher le bandeau quand l'application est masquée
         </label>
       </section>
 
@@ -128,8 +131,8 @@
         </label>
         <p class="help">
           Permet par exemple d'avoir un raccourci sur Alt gauche + P et un autre sur Alt droit + P.
-          Les raccourcis Windows ne savent pas faire cette différence : l'organizer écoute alors
-          lui-même le clavier, et seulement quand une fenêtre Dofus ou l'organizer est au premier
+          Les raccourcis Windows ne savent pas faire cette différence : l'application écoute alors
+          elle-même le clavier, et seulement quand une fenêtre Dofus ou l'application est au premier
           plan. Une fois l'option cochée, saisissez à nouveau les raccourcis concernés.
         </p>
       </details>

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Dofus Organizer",
-  "version": "0.1.0",
-  "identifier": "com.dofusorganizer.desktop",
+  "productName": "Dofus Team Manager",
+  "version": "0.2.0",
+  "identifier": "com.dofusteammanager.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Dofus Organizer",
+        "title": "Dofus Team Manager",
         "width": 420,
         "height": 500,
         "decorations": false,
@@ -23,7 +23,7 @@
       {
         "label": "pip",
         "url": "pip.html",
-        "title": "Dofus Organizer — bandeau",
+        "title": "Dofus Team Manager — bandeau",
         "width": 240,
         "height": 40,
         "visible": false,

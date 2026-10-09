@@ -333,11 +333,11 @@ function toggleTheme(): void {
   renderThemeButton();
 }
 
-/** L'option « afficher le bandeau quand l'organizer est masqué » (oui par défaut). */
+/** L'option « afficher le bandeau quand l'application est masquée » (oui par défaut). */
 const pipOnMinimize = () => readPref("pip-on-minimize") !== "no";
 
 // Vrai quand le bandeau a été ouvert automatiquement par le masquage : il
-// sera alors refermé automatiquement quand l'organizer reviendra.
+// sera alors refermé automatiquement quand l'application reviendra.
 let pipOpenedByMinimize = false;
 
 /** Bouton ▭ : ouvre ou ferme le bandeau à la main. */
@@ -350,7 +350,7 @@ async function togglePip(): Promise<void> {
 }
 
 /**
- * Réagit quand l'organizer est réduit ou revient, quelle qu'en soit la façon
+ * Réagit quand l'application est réduite ou revient, quelle qu'en soit la façon
  * (notre bouton —, celui de Windows, un clic dans la barre des tâches...).
  * Windows signale ces changements comme des redimensionnements.
  */
@@ -442,7 +442,7 @@ async function listenToRust(): Promise<void> {
 /**
  * Point de départ : on applique les préférences, on lit la configuration, on
  * dessine tout, puis on relit les fenêtres régulièrement (seulement quand
- * l'organizer est visible).
+ * l'application est visible).
  */
 async function start(): Promise<void> {
   applyTheme();
