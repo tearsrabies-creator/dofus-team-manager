@@ -136,6 +136,10 @@ Le code (noms de fichiers, de variables, de fonctions) est en anglais ; les comm
 
 Les images de `public/classes/` sont les symboles des classes de Dofus, récupérés sur DofusDB (`https://api.dofusdb.fr/img/breeds/symbol_N.png`, où N est le numéro de la classe dans le jeu) et réduits à 64 × 64 pixels. Ils sont inclus dans l'application : rien n'est téléchargé pendant qu'on joue. Ces symboles sont la propriété d'Ankama.
 
+## Licence
+
+Tous droits réservés. Le code est visible publiquement, mais il n'est pas sous licence libre : il n'est pas permis de le réutiliser, de le modifier pour le redistribuer ou de redistribuer l'application sans autorisation. Les symboles de classe restent la propriété d'Ankama.
+
 ## Points à vérifier en jeu
 
 - **Commande chaînée** : il reste à vérifier que le chat de Dofus accepte plusieurs `/invite` séparés par `; ` dans un seul message. Sinon, on changera `INVITE_SEPARATOR` dans `src/common.ts`, ou le fonctionnement du bouton.
