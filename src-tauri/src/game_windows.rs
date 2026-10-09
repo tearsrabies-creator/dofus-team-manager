@@ -31,7 +31,8 @@ use windows::Win32::System::Threading::{
     PROCESS_QUERY_LIMITED_INFORMATION,
 };
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VK_MENU,
+    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
+    VK_MENU,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetForegroundWindow, GetWindow, GetWindowThreadProcessId, InternalGetWindowText,
@@ -58,7 +59,7 @@ pub fn list() -> Vec<RawWindow> {
         // `collect_window` refera la conversion inverse pour remplir le vecteur.
         // `let _ =` : on ignore volontairement le résultat ; en cas d'échec,
         // la liste reste simplement vide.
-        let _ = EnumWindows(Some(collect_window), LPARAM(&mut all as *mut Vec<HWND> as isize));
+        let _ = EnumWindows(Some(collect_window), LPARAM((&raw mut all) as isize));
     }
 
     // 2) On ne garde que les fenêtres qui ressemblent à une fenêtre de jeu Dofus.
@@ -139,8 +140,11 @@ pub fn activate(id: isize) -> Result<(), String> {
                 },
             },
         };
-        let press_release = [key(Default::default()), key(KEYEVENTF_KEYUP)];
-        SendInput(&press_release, std::mem::size_of::<INPUT>() as i32);
+        let press_release = [key(KEYBD_EVENT_FLAGS::default()), key(KEYEVENTF_KEYUP)];
+        // La taille d'un `INPUT` (quelques dizaines d'octets) tient toujours
+        // dans un `i32` : la conversion vérifiée ne peut pas échouer.
+        let input_size = i32::try_from(std::mem::size_of::<INPUT>()).unwrap_or(i32::MAX);
+        SendInput(&press_release, input_size);
 
         if SetForegroundWindow(hwnd).as_bool() {
             Ok(())
@@ -184,14 +188,16 @@ fn is_top_level_visible(hwnd: HWND) -> bool {
 fn title_of(hwnd: HWND) -> String {
     let mut buffer = [0u16; 256];
     let written = unsafe { InternalGetWindowText(hwnd, &mut buffer) };
-    String::from_utf16_lossy(&buffer[..written.max(0) as usize])
+    // `written` est un nombre de caractères, négatif seulement en cas d'erreur.
+    let len = usize::try_from(written).unwrap_or(0);
+    String::from_utf16_lossy(&buffer[..len])
 }
 
 /// Le numéro du processus (le programme en cours d'exécution) qui possède la fenêtre.
 fn process_of(hwnd: HWND) -> u32 {
     let mut pid = 0u32;
     unsafe {
-        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+        GetWindowThreadProcessId(hwnd, Some(&raw mut pid));
     }
     pid
 }
@@ -214,19 +220,19 @@ fn executable_name(pid: u32) -> Option<String> {
         let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
 
         let mut buffer = [0u16; 1024];
-        let mut size = buffer.len() as u32;
+        let mut size = u32::try_from(buffer.len()).unwrap_or(0);
         let result = QueryFullProcessImageNameW(
             process,
             PROCESS_NAME_WIN32,
             PWSTR(buffer.as_mut_ptr()),
-            &mut size,
+            &raw mut size,
         );
         // Toujours refermer ce qu'on a ouvert, même en cas d'erreur.
         let _ = CloseHandle(process);
         result.ok()?;
 
         // On obtient un chemin complet (C:\...\Dofus.exe) : on garde la fin.
-        let path = String::from_utf16_lossy(&buffer[..size as usize]);
+        let path = String::from_utf16_lossy(&buffer[..usize::try_from(size).unwrap_or(0)]);
         path.rsplit('\\').next().map(str::to_string)
     }
 }

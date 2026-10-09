@@ -56,7 +56,10 @@ pub fn parse_title(title: &str) -> TitleInfo {
         None
     };
 
-    TitleInfo { character, class_name }
+    TitleInfo {
+        character,
+        class_name,
+    }
 }
 
 /// Range les fenêtres présentes dans l'ordre choisi par l'utilisateur.

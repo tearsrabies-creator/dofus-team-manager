@@ -7,6 +7,57 @@ import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { currentMonitor, getCurrentWindow, Window } from "@tauri-apps/api/window";
 
 // ---------------------------------------------------------------------------
+// Tâches asynchrones
+//
+// Beaucoup d'actions passent par Rust (`invoke`) et rendent une promesse.
+// Un gestionnaire d'événement (un clic...) n'attend pas de réponse : si l'on
+// y lance une promesse sans s'en occuper, une erreur éventuelle passerait
+// inaperçue. Ces deux outils la font apparaître dans la console de
+// développement (clic droit > Inspecter, en mode dev).
+// ---------------------------------------------------------------------------
+
+/** Lance une tâche sans l'attendre, en signalant une éventuelle erreur. */
+export function fireAndForget(task: Promise<unknown>): void {
+  task.catch((error: unknown) => console.error(error));
+}
+
+/**
+ * Adapte une fonction asynchrone pour en faire un gestionnaire d'événement :
+ * `button.addEventListener("click", handler(onClick))`.
+ * `<A extends unknown[]>` : la fonction rendue accepte les mêmes arguments.
+ */
+export function handler<A extends unknown[]>(
+  task: (...args: A) => Promise<unknown>,
+): (...args: A) => void {
+  return (...args) => fireAndForget(task(...args));
+}
+
+// ---------------------------------------------------------------------------
+// Petits éléments d'interface partagés
+// ---------------------------------------------------------------------------
+
+/** Petit bouton avec un symbole, un libellé au survol et une action. */
+export function iconButton(text: string, label: string, action: () => void): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "small";
+  button.textContent = text;
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.addEventListener("click", action);
+  return button;
+}
+
+/** Le bouton ⏸ / ▶ (des deux fenêtres) montre si les raccourcis sont actifs ou coupés. */
+export function renderPauseButton(button: HTMLElement, paused: boolean): void {
+  button.textContent = paused ? "▶" : "⏸";
+  const label = paused ? "Raccourcis coupés : cliquer pour les réactiver" : "Couper les raccourcis";
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-pressed", String(paused));
+}
+
+// ---------------------------------------------------------------------------
 // Types : ils décrivent la forme des données envoyées par Rust. Ils doivent
 // correspondre aux structures `GameWindow` (lib.rs) et `Config` (config.rs).
 // `string | null` veut dire « un texte, ou rien » (le `Option` de Rust).
@@ -132,7 +183,7 @@ export function crownButton(w: GameWindow): HTMLButtonElement {
     // Le clic ne doit pas atteindre ce qui entoure la couronne (sur le
     // bandeau, ça afficherait aussi la fenêtre du personnage).
     event.stopPropagation();
-    invoke("set_leader", { character: w.leader ? null : w.character });
+    fireAndForget(invoke("set_leader", { character: w.leader ? null : w.character }));
   });
   return button;
 }
@@ -214,14 +265,14 @@ export function refreshWhileVisible(refresh: () => void, intervalMs: number) {
  * Les tailles CSS sont en pixels « logiques », indépendants du zoom de
  * Windows : d'où `LogicalSize`.
  */
-export function fitWindowToContent(root: HTMLElement, keepOnScreen = false) {
+export function fitWindowToContent(root: HTMLElement, keepOnScreen = false): void {
   const appWindow = getCurrentWindow();
   const fit = async () => {
     const { width, height } = root.getBoundingClientRect();
     await appWindow.setSize(new LogicalSize(Math.ceil(width), Math.ceil(height)));
     if (keepOnScreen) await moveBackOnScreen();
   };
-  new ResizeObserver(fit).observe(root);
+  new ResizeObserver(handler(fit)).observe(root);
 }
 
 /**
@@ -264,12 +315,11 @@ export async function restoreMain() {
  * Place le bandeau là où l'utilisateur l'avait laissé, ou par défaut dans le
  * coin en haut à droite de l'écran. Appelée par le bandeau lui-même.
  */
-export async function placePip() {
+export async function placePip(): Promise<void> {
   const pip = getCurrentWindow();
-  const saved = readPref("pip-position");
+  const saved = savedPipPosition();
   if (saved) {
-    const { x, y } = JSON.parse(saved);
-    await pip.setPosition(new PhysicalPosition(x, y));
+    await pip.setPosition(new PhysicalPosition(saved.x, saved.y));
   } else {
     const monitor = await currentMonitor();
     if (monitor) {
@@ -288,4 +338,28 @@ export async function placePip() {
   await pip.onMoved(({ payload }) =>
     writePref("pip-position", JSON.stringify({ x: payload.x, y: payload.y })),
   );
+}
+
+/**
+ * La position du bandeau retenue lors d'une session précédente, ou `null`.
+ * Le texte enregistré est vérifié : s'il est abîmé, on l'ignore au lieu de
+ * planter (`JSON.parse` rend une valeur de type inconnu, `unknown`).
+ */
+function savedPipPosition(): { x: number; y: number } | null {
+  try {
+    const value: unknown = JSON.parse(readPref("pip-position") ?? "null");
+    if (
+      typeof value === "object" &&
+      value !== null &&
+      "x" in value &&
+      "y" in value &&
+      typeof value.x === "number" &&
+      typeof value.y === "number"
+    ) {
+      return { x: value.x, y: value.y };
+    }
+  } catch {
+    // Texte illisible : on repart de la position par défaut.
+  }
+  return null;
 }

@@ -17,7 +17,9 @@ use std::path::Path;
 /// `#[serde(alias = "...")]` : accepte aussi l'ancien nom (français) du champ,
 /// pour relire les fichiers écrits par les premières versions.
 /// `Clone` permet de faire une copie complète avec `.clone()`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// `Default` : la configuration vide, quand il n'y a pas encore de fichier ;
+/// chaque champ prend sa propre valeur par défaut.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     /// Tous les personnages déjà vus, dans l'ordre choisi par l'utilisateur.
@@ -67,8 +69,8 @@ pub struct Shortcuts {
     pub characters: BTreeMap<String, String>,
 }
 
-// `impl Default for ...` : la valeur utilisée quand il n'y a pas encore de
-// fichier, ou pour un champ manquant.
+// `impl Default for ...` écrit à la main : contrairement aux autres
+// structures, les raccourcis par défaut ne sont pas vides.
 impl Default for Shortcuts {
     fn default() -> Self {
         Shortcuts {
@@ -76,18 +78,6 @@ impl Default for Shortcuts {
             previous: "Control+Shift+Tab".into(),
             toggle: String::new(),
             characters: BTreeMap::new(),
-        }
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            order: Vec::new(),
-            selection: Vec::new(),
-            leader: None,
-            shortcuts: Shortcuts::default(),
-            advanced: Advanced::default(),
         }
     }
 }
@@ -137,11 +127,16 @@ mod tests {
 
     #[test]
     fn new_characters_added_and_selected() {
-        let mut config = Config::default();
-        config.order = vec!["Joueur1".into()];
+        let mut config = Config {
+            order: vec!["Joueur1".into()],
+            ..Default::default()
+        };
         let changed = config.add_new_characters(&["Joueur1".into(), "Joueur-2".into()]);
         assert!(changed);
-        assert_eq!(config.order, vec!["Joueur1".to_string(), "Joueur-2".to_string()]);
+        assert_eq!(
+            config.order,
+            vec!["Joueur1".to_string(), "Joueur-2".to_string()]
+        );
         assert_eq!(config.selection, vec!["Joueur-2".to_string()]);
         // Une deuxième fois, rien ne change.
         assert!(!config.add_new_characters(&["Joueur-2".into()]));
@@ -164,6 +159,13 @@ mod tests {
         assert_eq!(config.order, vec!["Joueur1".to_string()]);
         assert_eq!(config.leader.as_deref(), Some("Joueur1"));
         assert_eq!(config.shortcuts.next, "F2");
-        assert_eq!(config.shortcuts.characters.get("Joueur1").map(String::as_str), Some("F5"));
+        assert_eq!(
+            config
+                .shortcuts
+                .characters
+                .get("Joueur1")
+                .map(String::as_str),
+            Some("F5")
+        );
     }
 }

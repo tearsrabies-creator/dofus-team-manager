@@ -65,7 +65,13 @@ impl Combo {
     /// Lit une combinaison écrite comme « Control+Alt+KeyP ». Rend un message
     /// d'erreur en français si le texte n'est pas compris.
     pub fn parse(text: &str) -> Result<Combo, String> {
-        let mut combo = Combo { ctrl: Side::None, shift: Side::None, alt: Side::None, win: Side::None, scan: 0 };
+        let mut combo = Combo {
+            ctrl: Side::None,
+            shift: Side::None,
+            alt: Side::None,
+            win: Side::None,
+            scan: 0,
+        };
         let mut key: Option<u32> = None;
 
         for part in text.split('+').map(str::trim).filter(|p| !p.is_empty()) {
@@ -86,9 +92,13 @@ impl Combo {
                 "MetaRight" => (&mut combo.win, Side::Right),
                 _ => {
                     if key.is_some() {
-                        return Err(format!("« {text} » contient plusieurs touches principales."));
+                        return Err(format!(
+                            "« {text} » contient plusieurs touches principales."
+                        ));
                     }
-                    key = Some(scan_code(part).ok_or_else(|| format!("la touche « {part} » n'est pas prise en charge."))?);
+                    key = Some(scan_code(part).ok_or_else(|| {
+                        format!("la touche « {part} » n'est pas prise en charge.")
+                    })?);
                     continue;
                 }
             };
@@ -101,7 +111,7 @@ impl Combo {
     }
 
     /// Vrai si l'état du clavier correspond à la combinaison.
-    pub fn matches(&self, mods: &Modifiers, scan: u32) -> bool {
+    pub fn matches(&self, mods: Modifiers, scan: u32) -> bool {
         // AltGr (Alt droit sur les claviers français) : Windows simule en plus
         // un appui sur Ctrl gauche. Si Alt droit est enfoncé et que la
         // combinaison ne parle pas de Ctrl, on ignore ce faux Ctrl gauche.
@@ -115,6 +125,18 @@ impl Combo {
             && self.win.accepts(mods.lwin, mods.rwin)
     }
 
+    /// La même combinaison, sans exiger de côté (pour les raccourcis Windows,
+    /// qui ne savent pas distinguer gauche et droite).
+    pub fn without_sides(&self) -> Combo {
+        Combo {
+            ctrl: self.ctrl.without_side(),
+            shift: self.shift.without_side(),
+            alt: self.alt.without_side(),
+            win: self.win.without_side(),
+            scan: self.scan,
+        }
+    }
+
     /// Vrai si la combinaison exige un côté précis pour au moins un modificateur.
     pub fn has_sides(&self) -> bool {
         [self.ctrl, self.shift, self.alt, self.win]
@@ -124,6 +146,10 @@ impl Combo {
 }
 
 /// L'état des huit touches de modification au moment d'un appui.
+/// Huit booléens, un par touche physique : c'est exactement l'information
+/// que donne Windows, d'où l'exception à la règle de clippy qui conseille
+/// d'éviter les structures pleines de booléens.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Modifiers {
     pub lctrl: bool,
@@ -141,12 +167,32 @@ pub struct Modifiers {
 pub fn scan_code(code: &str) -> Option<u32> {
     // Les lettres, rangée par rangée, dans l'ordre du clavier QWERTY.
     const LETTERS: [(&str, u32); 26] = [
-        ("KeyQ", 0x10), ("KeyW", 0x11), ("KeyE", 0x12), ("KeyR", 0x13), ("KeyT", 0x14),
-        ("KeyY", 0x15), ("KeyU", 0x16), ("KeyI", 0x17), ("KeyO", 0x18), ("KeyP", 0x19),
-        ("KeyA", 0x1E), ("KeyS", 0x1F), ("KeyD", 0x20), ("KeyF", 0x21), ("KeyG", 0x22),
-        ("KeyH", 0x23), ("KeyJ", 0x24), ("KeyK", 0x25), ("KeyL", 0x26),
-        ("KeyZ", 0x2C), ("KeyX", 0x2D), ("KeyC", 0x2E), ("KeyV", 0x2F), ("KeyB", 0x30),
-        ("KeyN", 0x31), ("KeyM", 0x32),
+        ("KeyQ", 0x10),
+        ("KeyW", 0x11),
+        ("KeyE", 0x12),
+        ("KeyR", 0x13),
+        ("KeyT", 0x14),
+        ("KeyY", 0x15),
+        ("KeyU", 0x16),
+        ("KeyI", 0x17),
+        ("KeyO", 0x18),
+        ("KeyP", 0x19),
+        ("KeyA", 0x1E),
+        ("KeyS", 0x1F),
+        ("KeyD", 0x20),
+        ("KeyF", 0x21),
+        ("KeyG", 0x22),
+        ("KeyH", 0x23),
+        ("KeyJ", 0x24),
+        ("KeyK", 0x25),
+        ("KeyL", 0x26),
+        ("KeyZ", 0x2C),
+        ("KeyX", 0x2D),
+        ("KeyC", 0x2E),
+        ("KeyV", 0x2F),
+        ("KeyB", 0x30),
+        ("KeyN", 0x31),
+        ("KeyM", 0x32),
     ];
     if let Some((_, scan)) = LETTERS.iter().find(|(name, _)| *name == code) {
         return Some(*scan);
@@ -163,10 +209,10 @@ pub fn scan_code(code: &str) -> Option<u32> {
     if let Some(number) = code.strip_prefix('F') {
         if let Ok(n) = number.parse::<u32>() {
             return match n {
-                1..=10 => Some(0x3A + n),   // F1 = 0x3B ... F10 = 0x44
+                1..=10 => Some(0x3A + n), // F1 = 0x3B ... F10 = 0x44
                 11 => Some(0x57),
                 12 => Some(0x58),
-                13..=23 => Some(0x57 + n),  // F13 = 0x64 ... F23 = 0x6E
+                13..=23 => Some(0x57 + n), // F13 = 0x64 ... F23 = 0x6E
                 24 => Some(0x76),
                 _ => None,
             };
@@ -266,29 +312,48 @@ mod tests {
     #[test]
     fn exact_modifiers_required() {
         let combo = Combo::parse("Control+KeyG").unwrap();
-        let ctrl = Modifiers { lctrl: true, ..Default::default() };
-        let ctrl_shift = Modifiers { lctrl: true, lshift: true, ..Default::default() };
-        assert!(combo.matches(&ctrl, 0x22));
-        assert!(!combo.matches(&ctrl_shift, 0x22)); // Maj en trop
-        assert!(!combo.matches(&ctrl, 0x23)); // autre touche
+        let ctrl = Modifiers {
+            lctrl: true,
+            ..Default::default()
+        };
+        let ctrl_shift = Modifiers {
+            lctrl: true,
+            lshift: true,
+            ..Default::default()
+        };
+        assert!(combo.matches(ctrl, 0x22));
+        assert!(!combo.matches(ctrl_shift, 0x22)); // Maj en trop
+        assert!(!combo.matches(ctrl, 0x23)); // autre touche
     }
 
     #[test]
     fn left_and_right_are_distinguished() {
         let left = Combo::parse("AltLeft+KeyP").unwrap();
         let right = Combo::parse("AltRight+KeyP").unwrap();
-        let lalt = Modifiers { lalt: true, ..Default::default() };
-        let ralt = Modifiers { ralt: true, ..Default::default() };
-        assert!(left.matches(&lalt, 0x19) && !left.matches(&ralt, 0x19));
-        assert!(right.matches(&ralt, 0x19) && !right.matches(&lalt, 0x19));
+        let lalt = Modifiers {
+            lalt: true,
+            ..Default::default()
+        };
+        let ralt = Modifiers {
+            ralt: true,
+            ..Default::default()
+        };
+        assert!(left.matches(lalt, 0x19) && !left.matches(ralt, 0x19));
+        assert!(right.matches(ralt, 0x19) && !right.matches(lalt, 0x19));
     }
 
     #[test]
     fn altgr_fake_ctrl_is_ignored() {
         // AltGr = Alt droit + un faux Ctrl gauche simulé par Windows.
-        let altgr = Modifiers { ralt: true, lctrl: true, ..Default::default() };
-        assert!(Combo::parse("AltRight+KeyP").unwrap().matches(&altgr, 0x19));
+        let altgr = Modifiers {
+            ralt: true,
+            lctrl: true,
+            ..Default::default()
+        };
+        assert!(Combo::parse("AltRight+KeyP").unwrap().matches(altgr, 0x19));
         // Si la combinaison demande vraiment Ctrl gauche, il compte.
-        assert!(Combo::parse("ControlLeft+AltRight+KeyP").unwrap().matches(&altgr, 0x19));
+        assert!(Combo::parse("ControlLeft+AltRight+KeyP")
+            .unwrap()
+            .matches(altgr, 0x19));
     }
 }

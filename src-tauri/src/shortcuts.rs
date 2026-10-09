@@ -83,11 +83,16 @@ pub fn sync(app: &AppHandle, force: bool) -> Vec<String> {
     }
     control.applied = Some(mode);
 
-    let config = state.config.lock().unwrap();
-    let (bindings, mut errors) = build_bindings(&config.shortcuts, mode);
+    // On ne garde le verrou de la configuration que le temps de la lire : il
+    // est relâché à la fin de ce bloc, avant de parler au thread clavier.
+    let (bindings, mut errors, distinguish_sides) = {
+        let config = state.config.lock().unwrap();
+        let (bindings, errors) = build_bindings(&config.shortcuts, mode);
+        (bindings, errors, config.advanced.distinguish_sides)
+    };
     let backend = match mode {
         Mode::Off => Backend::Off,
-        _ if config.advanced.distinguish_sides => Backend::Hook,
+        _ if distinguish_sides => Backend::Hook,
         _ => Backend::Hotkeys,
     };
     // Une combinaison qui précise un côté (Ctrl gauche...) alors que l'option
@@ -111,14 +116,30 @@ fn build_bindings(shortcuts: &Shortcuts, mode: Mode) -> (Vec<Binding>, Vec<Strin
     // La liste (texte du raccourci, action, nom affiché en cas d'erreur).
     let mut requests: Vec<(String, Action, String)> = Vec::new();
     if mode != Mode::Off {
-        requests.push((shortcuts.toggle.clone(), Action::TogglePause, "Interrupteur".into()));
+        requests.push((
+            shortcuts.toggle.clone(),
+            Action::TogglePause,
+            "Interrupteur".into(),
+        ));
     }
     if mode == Mode::All {
-        requests.push((shortcuts.next.clone(), Action::Cycle(Direction::Next), "Fenêtre suivante".into()));
-        requests.push((shortcuts.previous.clone(), Action::Cycle(Direction::Previous), "Fenêtre précédente".into()));
+        requests.push((
+            shortcuts.next.clone(),
+            Action::Cycle(Direction::Next),
+            "Fenêtre suivante".into(),
+        ));
+        requests.push((
+            shortcuts.previous.clone(),
+            Action::Cycle(Direction::Previous),
+            "Fenêtre précédente".into(),
+        ));
         // Parcourir un dictionnaire donne des paires (clé, valeur).
         for (character, text) in &shortcuts.characters {
-            requests.push((text.clone(), Action::Character(character.clone()), character.clone()));
+            requests.push((
+                text.clone(),
+                Action::Character(character.clone()),
+                character.clone(),
+            ));
         }
     }
 
@@ -129,7 +150,11 @@ fn build_bindings(shortcuts: &Shortcuts, mode: Mode) -> (Vec<Binding>, Vec<Strin
             continue; // pas de raccourci pour cette action
         }
         match Combo::parse(&text) {
-            Ok(combo) => bindings.push(Binding { combo, action, label }),
+            Ok(combo) => bindings.push(Binding {
+                combo,
+                action,
+                label,
+            }),
             Err(message) => errors.push(format!("{label} : {message}")),
         }
     }
@@ -144,31 +169,48 @@ mod tests {
     // défaut (ici `false` et `None`).
     #[test]
     fn nothing_outside_dofus_and_organizer() {
-        let control = Control { foreground_allowed: false, ..Default::default() };
+        let control = Control {
+            foreground_allowed: false,
+            ..Default::default()
+        };
         assert_eq!(control.desired_mode(), Mode::Off);
     }
 
     #[test]
     fn nothing_while_capturing() {
-        let control = Control { foreground_allowed: true, capturing: true, ..Default::default() };
+        let control = Control {
+            foreground_allowed: true,
+            capturing: true,
+            ..Default::default()
+        };
         assert_eq!(control.desired_mode(), Mode::Off);
     }
 
     #[test]
     fn only_toggle_when_paused() {
-        let control = Control { foreground_allowed: true, paused: true, ..Default::default() };
+        let control = Control {
+            foreground_allowed: true,
+            paused: true,
+            ..Default::default()
+        };
         assert_eq!(control.desired_mode(), Mode::ToggleOnly);
     }
 
     #[test]
     fn everything_otherwise() {
-        let control = Control { foreground_allowed: true, ..Default::default() };
+        let control = Control {
+            foreground_allowed: true,
+            ..Default::default()
+        };
         assert_eq!(control.desired_mode(), Mode::All);
     }
 
     #[test]
     fn paused_keeps_only_the_toggle() {
-        let shortcuts = Shortcuts { toggle: "Control+KeyP".into(), ..Default::default() };
+        let shortcuts = Shortcuts {
+            toggle: "Control+KeyP".into(),
+            ..Default::default()
+        };
         let (bindings, errors) = build_bindings(&shortcuts, Mode::ToggleOnly);
         assert!(errors.is_empty());
         assert_eq!(bindings.len(), 1);
@@ -177,7 +219,10 @@ mod tests {
 
     #[test]
     fn bad_text_is_reported() {
-        let shortcuts = Shortcuts { next: "Control+Banane".into(), ..Default::default() };
+        let shortcuts = Shortcuts {
+            next: "Control+Banane".into(),
+            ..Default::default()
+        };
         let (_, errors) = build_bindings(&shortcuts, Mode::All);
         assert_eq!(errors.len(), 1);
     }

@@ -17,6 +17,7 @@
   --accent-text: #ffffff;
   --active: #fbe9d6;
   --error: #b3261e;
+  --close-hover: #c42b1c; /* le rouge de la croix de Windows */
 
   font-family: "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
@@ -41,6 +42,12 @@
 
 * {
   box-sizing: border-box;
+}
+
+/* Élément caché mais dont la place reste réservée (pour garder les lignes
+   alignées), par exemple la poignée d'une fenêtre non connectée. */
+.invisible {
+  visibility: hidden;
 }
 
 /* La fenêtre prend la taille du contenu (voir fitWindowToContent) :
@@ -131,16 +138,13 @@ button.small[aria-pressed="true"] {
   gap: 16px;
 }
 
+/* L'en-tête sert de barre de titre (fenêtre sans cadre Windows) :
+   pas de sélection de texte quand on le tire pour déplacer la fenêtre. */
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-/* L'en-tête sert de barre de titre (fenêtre sans cadre Windows) :
-   pas de sélection de texte quand on le tire pour déplacer la fenêtre. */
-header {
   user-select: none;
 }
 
@@ -151,8 +155,8 @@ header {
 
 /* La croix : rouge au survol, comme celle de Windows. */
 button.small.close:hover {
-  background: #c42b1c;
-  border-color: #c42b1c;
+  background: var(--close-hover);
+  border-color: var(--close-hover);
   color: #ffffff;
 }
 

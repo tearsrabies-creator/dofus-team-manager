@@ -9,7 +9,9 @@
 //! - `config`       : lecture et écriture du fichier de configuration ;
 //! - `shortcuts`    : quels raccourcis existent et lesquels sont actifs ;
 //! - `combo`        : lire une combinaison de touches, logique pure et testée ;
-//! - `input`        : l'écoute du clavier, sur son propre thread.
+//! - `input`        : l'écoute du clavier, sur son propre thread ;
+//! - `clipboard`    : écrire dans le presse-papiers ;
+//! - `commands`     : les commandes appelables par l'interface.
 //!
 //! Légèreté : rien ne tourne en boucle côté Rust. Le programme ne se réveille
 //! que pour un raccourci, un changement de premier plan ou une demande de
@@ -18,6 +20,7 @@
 // `mod x;` dit au compilateur d'inclure le fichier `x.rs`.
 mod clipboard;
 mod combo;
+mod commands;
 mod config;
 mod foreground;
 mod game_windows;
@@ -28,7 +31,7 @@ mod shortcuts;
 use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 
 use config::Config;
 use shortcuts::{Action, Control};
@@ -43,10 +46,10 @@ use shortcuts::{Action, Control};
 /// (`.unwrap()` après `.lock()` arrête le programme si une autre partie a
 /// planté en tenant le verrou : ça ne devrait jamais arriver.)
 pub struct AppState {
-    config: Mutex<Config>,
-    config_path: PathBuf,
+    pub(crate) config: Mutex<Config>,
+    pub(crate) config_path: PathBuf,
     /// Ce qui décide quels raccourcis sont actifs (voir shortcuts.rs).
-    control: Mutex<Control>,
+    pub(crate) control: Mutex<Control>,
 }
 
 /// Une fenêtre de jeu telle qu'on l'envoie à l'interface.
@@ -55,7 +58,7 @@ pub struct AppState {
 /// les noms de champs à la façon JavaScript (`class_name` devient `className`).
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct GameWindow {
+pub(crate) struct GameWindow {
     /// Identifiant Windows, pour l'activer depuis l'interface.
     id: isize,
     /// La clé qui sert dans la configuration : le nom du personnage, ou un
@@ -76,12 +79,15 @@ struct GameWindow {
 /// Rassemble les fenêtres Dofus ouvertes, triées dans l'ordre choisi, avec
 /// leur état (cochée, active, chef, numéro). Ajoute au passage les nouveaux
 /// personnages à la configuration (et l'enregistre si elle a changé).
-fn collect_game_windows(state: &AppState) -> Vec<GameWindow> {
+pub(crate) fn collect_game_windows(state: &AppState) -> Vec<GameWindow> {
     let raw = game_windows::list();
     let foreground = game_windows::foreground();
 
     // Pour chaque fenêtre, on lit le titre et on choisit sa clé.
-    let infos: Vec<_> = raw.iter().map(|w| navigation::parse_title(&w.title)).collect();
+    let infos: Vec<_> = raw
+        .iter()
+        .map(|w| navigation::parse_title(&w.title))
+        .collect();
     let keys: Vec<String> = raw
         .iter()
         .zip(&infos) // `zip` avance dans deux listes en même temps
@@ -130,7 +136,7 @@ pub(crate) fn run_action(app: &AppHandle, action: Action) {
     // On cherche l'identifiant de la fenêtre à afficher.
     let target = match action {
         Action::TogglePause => {
-            toggle_pause_internal(app);
+            toggle_pause(app);
             return;
         }
         Action::Cycle(direction) => {
@@ -159,7 +165,7 @@ pub(crate) fn run_action(app: &AppHandle, action: Action) {
 
 /// Coupe ou réactive les raccourcis, et prévient l'interface (les deux
 /// fenêtres) du nouvel état. Rend `true` si les raccourcis sont coupés.
-fn toggle_pause_internal(app: &AppHandle) -> bool {
+pub(crate) fn toggle_pause(app: &AppHandle) -> bool {
     // La « poignée » vers l'état doit vivre aussi longtemps que le verrou pris
     // dessus : on la range dans une variable (sinon, erreur E0716).
     let state = app.state::<AppState>();
@@ -177,108 +183,26 @@ fn toggle_pause_internal(app: &AppHandle) -> bool {
 ///
 /// On ne se fie pas à la fenêtre transmise par l'événement : quand on clique
 /// dans l'organizer, Windows signale parfois une fenêtre interne du moteur
-/// d'affichage (WebView2), qui appartient à un autre processus
-/// (msedgewebview2.exe). On redemande donc la vraie fenêtre au premier plan.
+/// d'affichage (`WebView2`), qui appartient à un autre processus
+/// (`msedgewebview2.exe`). On redemande donc la vraie fenêtre au premier plan.
 pub(crate) fn on_foreground_changed(app: &AppHandle) {
     let allowed = game_windows::is_allowed_foreground(game_windows::foreground());
-    app.state::<AppState>().control.lock().unwrap().foreground_allowed = allowed;
+    app.state::<AppState>()
+        .control
+        .lock()
+        .unwrap()
+        .foreground_allowed = allowed;
     shortcuts::sync(app, false);
     // L'interface met à jour la fenêtre active (si elle est visible).
     let _ = app.emit("foreground-changed", ());
 }
 
-// ---------------------------------------------------------------------------
-// Les commandes appelables depuis l'interface.
-// `#[tauri::command]` fabrique automatiquement le code qui reçoit l'appel
-// JavaScript, convertit les arguments depuis le JSON et renvoie le résultat.
-// Les paramètres `AppHandle` et `State<AppState>` sont fournis par Tauri : ce
-// n'est pas l'interface qui les passe. Ces commandes s'exécutent sur le
-// thread principal, comme le reste de la gestion des raccourcis.
-// ---------------------------------------------------------------------------
-
-/// Liste les fenêtres de jeu pour l'affichage.
-#[tauri::command]
-fn list_windows(state: State<AppState>) -> Vec<GameWindow> {
-    collect_game_windows(&state)
-}
-
-/// Rend la configuration actuelle.
-#[tauri::command]
-fn read_config(state: State<AppState>) -> Config {
-    state.config.lock().unwrap().clone()
-}
-
-/// Enregistre une nouvelle configuration et réapplique les raccourcis.
-/// Rend la liste des raccourcis qui n'ont pas pu être enregistrés.
-#[tauri::command]
-fn save_config(app: AppHandle, state: State<AppState>, config: Config) -> Result<Vec<String>, String> {
-    config.save(&state.config_path)?;
-    *state.config.lock().unwrap() = config;
-    Ok(shortcuts::sync(&app, true))
-}
-
-/// Donne la couronne à `character` (ou la retire avec `None`), depuis la
-/// fenêtre principale ou le bandeau. Prévient ensuite les deux fenêtres
-/// (`config-changed`) : chacune relit la configuration, et aucune ne risque
-/// d'écraser ce choix avec une copie dépassée.
-#[tauri::command]
-fn set_leader(app: AppHandle, state: State<AppState>, character: Option<String>) -> Result<(), String> {
-    {
-        let mut config = state.config.lock().unwrap();
-        config.leader = character;
-        config.save(&state.config_path)?;
-    } // le verrou est relâché ici, avant de prévenir l'interface
-    let _ = app.emit("config-changed", ());
-    Ok(())
-}
-
-/// Libère tous les raccourcis pendant que l'utilisateur en saisit un nouveau.
-/// Sans ça, Windows intercepterait la combinaison avant qu'elle n'arrive dans
-/// le champ de saisie si elle est déjà utilisée.
-#[tauri::command]
-fn suspend_shortcuts(app: AppHandle, state: State<AppState>) {
-    state.control.lock().unwrap().capturing = true;
-    shortcuts::sync(&app, false);
-}
-
-/// Réenregistre les raccourcis à la fin d'une saisie.
-#[tauri::command]
-fn resume_shortcuts(app: AppHandle, state: State<AppState>) -> Vec<String> {
-    state.control.lock().unwrap().capturing = false;
-    shortcuts::sync(&app, true)
-}
-
-/// Coupe ou réactive les raccourcis (boutons de l'interface).
-#[tauri::command]
-fn toggle_pause(app: AppHandle) -> bool {
-    toggle_pause_internal(&app)
-}
-
-/// Vrai si les raccourcis sont coupés.
-#[tauri::command]
-fn is_paused(state: State<AppState>) -> bool {
-    state.control.lock().unwrap().paused
-}
-
-/// Met une fenêtre de jeu au premier plan (clic sur un pseudo du bandeau).
-#[tauri::command]
-fn activate_window(id: isize) -> Result<(), String> {
-    game_windows::activate(id)
-}
-
-/// Met un texte dans le presse-papiers (bouton des invitations de groupe).
-#[tauri::command]
-fn copy_text(app: AppHandle, text: String) -> Result<(), String> {
-    // La fenêtre principale sert de « propriétaire » du contenu copié.
-    let owner = app
-        .get_webview_window("main")
-        .and_then(|window| window.hwnd().ok())
-        .map(|hwnd| hwnd.0 as isize)
-        .ok_or("Fenêtre principale introuvable.")?;
-    clipboard::copy_text(&text, owner)
-}
-
 /// Point d'entrée, appelé par main.rs.
+///
+/// # Panics
+///
+/// S'arrête avec un message si Tauri ne peut pas démarrer (par exemple si le
+/// composant `WebView2` de Windows est absent) : sans lui, rien n'est possible.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -309,16 +233,16 @@ pub fn run() {
         })
         // La liste des commandes que l'interface a le droit d'appeler.
         .invoke_handler(tauri::generate_handler![
-            list_windows,
-            read_config,
-            save_config,
-            set_leader,
-            suspend_shortcuts,
-            resume_shortcuts,
-            toggle_pause,
-            is_paused,
-            activate_window,
-            copy_text
+            commands::list_windows,
+            commands::read_config,
+            commands::save_config,
+            commands::set_leader,
+            commands::suspend_shortcuts,
+            commands::resume_shortcuts,
+            commands::toggle_pause,
+            commands::is_paused,
+            commands::activate_window,
+            commands::copy_text
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application");

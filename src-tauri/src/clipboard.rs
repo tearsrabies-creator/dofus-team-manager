@@ -9,7 +9,9 @@
 //! le donne au presse-papiers, qui en devient propriétaire.
 
 use windows::Win32::Foundation::{GlobalFree, HANDLE, HWND};
-use windows::Win32::System::DataExchange::{CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData};
+use windows::Win32::System::DataExchange::{
+    CloseClipboard, EmptyClipboard, OpenClipboard, SetClipboardData,
+};
 use windows::Win32::System::Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE};
 use windows::Win32::System::Ole::CF_UNICODETEXT;
 
@@ -42,7 +44,7 @@ pub fn copy_text(text: &str, owner: isize) -> Result<(), String> {
         let result = (|| -> Result<(), String> {
             EmptyClipboard().map_err(|e| e.to_string())?;
             let memory = GlobalAlloc(GMEM_MOVEABLE, bytes).map_err(|e| e.to_string())?;
-            let target = GlobalLock(memory) as *mut u16;
+            let target = GlobalLock(memory).cast::<u16>();
             if target.is_null() {
                 let _ = GlobalFree(Some(memory));
                 return Err("Mémoire indisponible pour le presse-papiers.".into());
@@ -51,7 +53,7 @@ pub fn copy_text(text: &str, owner: isize) -> Result<(), String> {
             let _ = GlobalUnlock(memory);
             // En cas de succès, le presse-papiers devient propriétaire de la
             // mémoire : on ne doit plus la libérer nous-mêmes.
-            if let Err(e) = SetClipboardData(CF_UNICODETEXT.0 as u32, Some(HANDLE(memory.0))) {
+            if let Err(e) = SetClipboardData(u32::from(CF_UNICODETEXT.0), Some(HANDLE(memory.0))) {
                 let _ = GlobalFree(Some(memory));
                 return Err(e.to_string());
             }

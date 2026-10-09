@@ -85,10 +85,13 @@ pub fn start(app: AppHandle) {
     // d'un côté (`Sender`) ressort de l'autre (`Receiver`).
     let (requests, receiver) = channel::<Request>();
     let (id_sender, id_receiver) = channel::<u32>();
-    std::thread::spawn(move || run(app, receiver, id_sender));
+    std::thread::spawn(move || run(app, &receiver, &id_sender));
     // On attend que le thread soit prêt et nous donne son numéro.
     if let Ok(thread_id) = id_receiver.recv() {
-        let _ = INPUT.set(InputThread { thread_id, requests });
+        let _ = INPUT.set(InputThread {
+            thread_id,
+            requests,
+        });
     }
 }
 
@@ -100,7 +103,15 @@ pub fn apply(bindings: Vec<Binding>, backend: Backend) -> Vec<String> {
         return vec!["L'écoute du clavier n'a pas pu démarrer.".into()];
     };
     let (reply, answer) = channel();
-    if input.requests.send(Request { bindings, backend, reply }).is_err() {
+    if input
+        .requests
+        .send(Request {
+            bindings,
+            backend,
+            reply,
+        })
+        .is_err()
+    {
         return vec!["L'écoute du clavier s'est arrêtée.".into()];
     }
     // On réveille le thread clavier, qui dort en attendant un message Windows.
@@ -120,8 +131,9 @@ struct State {
     bindings: Vec<Binding>,
     /// Le crochet installé, s'il y en a un.
     hook: Option<HHOOK>,
-    /// Combien de raccourcis Windows sont enregistrés (numérotés 0, 1, 2...).
-    hotkey_count: usize,
+    /// Combien de raccourcis Windows sont enregistrés (numérotés 0, 1, 2...,
+    /// en `i32` comme l'attend Windows).
+    hotkey_count: i32,
     /// Les touches qui ont déclenché un raccourci et sont encore enfoncées :
     /// on ignore leurs répétitions et on retient aussi leur relâchement.
     held: Vec<u32>,
@@ -136,23 +148,29 @@ thread_local! {
 }
 
 /// La boucle du thread clavier : attendre un message, le traiter, recommencer.
-fn run(app: AppHandle, requests: Receiver<Request>, id_sender: Sender<u32>) {
+fn run(app: AppHandle, requests: &Receiver<Request>, id_sender: &Sender<u32>) {
     let mut msg = MSG::default();
     unsafe {
         // Windows ne crée la file de messages d'un thread qu'à son premier
         // appel de ce genre : on la crée avant d'annoncer qu'on est prêt.
-        let _ = PeekMessageW(&mut msg, None, 0, 0, PM_NOREMOVE);
+        let _ = PeekMessageW(&raw mut msg, None, 0, 0, PM_NOREMOVE);
         let _ = id_sender.send(GetCurrentThreadId());
     }
     STATE.with(|s| {
-        *s.borrow_mut() = Some(State { app, bindings: Vec::new(), hook: None, hotkey_count: 0, held: Vec::new() });
+        *s.borrow_mut() = Some(State {
+            app,
+            bindings: Vec::new(),
+            hook: None,
+            hotkey_count: 0,
+            held: Vec::new(),
+        });
     });
 
     // `GetMessageW` endort le thread jusqu'au prochain message. Les appuis
     // vus par le crochet sont traités pendant cette attente (dans
     // `keyboard_proc`) ; ici n'arrivent que nos demandes et les raccourcis
     // Windows.
-    while unsafe { GetMessageW(&mut msg, None, 0, 0) }.as_bool() {
+    while unsafe { GetMessageW(&raw mut msg, None, 0, 0) }.as_bool() {
         match msg.message {
             WM_APP => {
                 // `try_recv` : prendre les demandes en attente, sans attendre.
@@ -187,7 +205,7 @@ fn replace_bindings(state: &mut State, bindings: Vec<Binding>, backend: Backend)
             let _ = UnhookWindowsHookEx(hook);
         }
         for id in 0..state.hotkey_count {
-            let _ = UnregisterHotKey(None, id as i32);
+            let _ = UnregisterHotKey(None, id);
         }
     }
     state.hotkey_count = 0;
@@ -198,13 +216,19 @@ fn replace_bindings(state: &mut State, bindings: Vec<Binding>, backend: Backend)
     // combinaisons sans les côtés pour repérer les doublons.
     let comparable = |c: &Combo| match backend {
         Backend::Hook => c.clone(),
-        _ => Combo { ctrl: c.ctrl.without_side(), shift: c.shift.without_side(), alt: c.alt.without_side(), win: c.win.without_side(), scan: c.scan },
+        _ => c.without_sides(),
     };
     let mut kept: Vec<Binding> = Vec::new();
     if backend != Backend::Off {
         for binding in bindings {
-            if kept.iter().any(|k| comparable(&k.combo) == comparable(&binding.combo)) {
-                errors.push(format!("{} : cette combinaison est déjà utilisée par une autre action.", binding.label));
+            if kept
+                .iter()
+                .any(|k| comparable(&k.combo) == comparable(&binding.combo))
+            {
+                errors.push(format!(
+                    "{} : cette combinaison est déjà utilisée par une autre action.",
+                    binding.label
+                ));
             } else {
                 kept.push(binding);
             }
@@ -214,12 +238,13 @@ fn replace_bindings(state: &mut State, bindings: Vec<Binding>, backend: Backend)
     match backend {
         Backend::Off => {}
         Backend::Hotkeys => {
-            for (id, binding) in kept.iter().enumerate() {
-                if let Err(message) = register_hotkey(id as i32, &binding.combo) {
+            // `zip(0..)` numérote les raccourcis 0, 1, 2... directement en `i32`.
+            for (binding, id) in kept.iter().zip(0..) {
+                if let Err(message) = register_hotkey(id, &binding.combo) {
                     errors.push(format!("{} : {message}", binding.label));
                 }
+                state.hotkey_count = id + 1;
             }
-            state.hotkey_count = kept.len();
         }
         Backend::Hook => {
             if !kept.is_empty() {
@@ -266,8 +291,13 @@ fn register_hotkey(id: i32, combo: &Combo) -> Result<(), String> {
 fn install_hook() -> Result<HHOOK, String> {
     unsafe {
         let module = GetModuleHandleW(PCWSTR::null()).map_err(|e| e.to_string())?;
-        SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), Some(HINSTANCE(module.0)), 0)
-            .map_err(|e| format!("Le crochet clavier n'a pas pu être installé ({e})."))
+        SetWindowsHookExW(
+            WH_KEYBOARD_LL,
+            Some(keyboard_proc),
+            Some(HINSTANCE(module.0)),
+            0,
+        )
+        .map_err(|e| format!("Le crochet clavier n'a pas pu être installé ({e})."))
     }
 }
 
@@ -276,21 +306,23 @@ fn install_hook() -> Result<HHOOK, String> {
 /// avant de transmettre la touche. Rendre `LRESULT(1)` « avale » la touche
 /// (le jeu ne la reçoit pas) ; `CallNextHookEx` la laisse passer.
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    if code == HC_ACTION as i32 {
+    if u32::try_from(code) == Ok(HC_ACTION) {
         let info = &*(lparam.0 as *const KBDLLHOOKSTRUCT);
         // On ignore les touches simulées par des programmes (y compris les
         // nôtres) : seules les vraies frappes comptent.
         if info.flags.0 & LLKHF_INJECTED.0 == 0 {
             let extended = info.flags.0 & LLKHF_EXTENDED.0 != 0;
             let scan = info.scanCode | if extended { 0xE000 } else { 0 };
-            let message = wparam.0 as u32;
+            let message = u32::try_from(wparam.0).unwrap_or(0);
             let down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
             let up = message == WM_KEYUP || message == WM_SYSKEYUP;
             // `try_borrow_mut` plutôt que `borrow_mut` : si l'état est déjà
             // utilisé (cas qui ne devrait pas arriver), on laisse passer la
             // touche au lieu de planter.
             let swallow = STATE.with(|s| match s.try_borrow_mut() {
-                Ok(mut guard) => guard.as_mut().is_some_and(|state| on_key(state, scan, down, up)),
+                Ok(mut guard) => guard
+                    .as_mut()
+                    .is_some_and(|state| on_key(state, scan, down, up)),
                 Err(_) => false,
             });
             if swallow {
@@ -319,7 +351,7 @@ fn on_key(state: &mut State, scan: u32, down: bool, up: bool) -> bool {
         return true; // répétition automatique d'une touche maintenue
     }
     let mods = current_modifiers();
-    if let Some(binding) = state.bindings.iter().find(|b| b.combo.matches(&mods, scan)) {
+    if let Some(binding) = state.bindings.iter().find(|b| b.combo.matches(mods, scan)) {
         state.held.push(scan);
         dispatch(&state.app, binding.action.clone());
         return true;
@@ -330,7 +362,7 @@ fn on_key(state: &mut State, scan: u32, down: bool, up: bool) -> bool {
 /// L'état actuel des huit touches de modification.
 fn current_modifiers() -> Modifiers {
     // Le bit de poids fort (valeur négative) indique une touche enfoncée.
-    let pressed = |key: VIRTUAL_KEY| unsafe { GetAsyncKeyState(key.0 as i32) } < 0;
+    let pressed = |key: VIRTUAL_KEY| unsafe { GetAsyncKeyState(i32::from(key.0)) } < 0;
     Modifiers {
         lctrl: pressed(VK_LCONTROL),
         rctrl: pressed(VK_RCONTROL),

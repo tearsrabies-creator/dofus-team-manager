@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Organizer multicompte pour Dofus : navigation entre fenêtres et invitations de groupe"
 authors = ["Contributeurs de Dofus Organizer"]
 edition = "2021"
+# Version minimale de Rust : le code utilise `&raw mut` (Rust 1.82).
+rust-version = "1.82"
 
 [lib]
 # Le code de l'application est compilé comme une bibliothèque (lib.rs),

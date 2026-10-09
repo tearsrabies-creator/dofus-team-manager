@@ -1,0 +1,44 @@
+# Vérifications automatiques, à chaque envoi sur `main` et à chaque
+# proposition de modification (pull request) : mise en forme, analyse du code
+# et tests, côté TypeScript et côté Rust.
+name: Vérifications
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: TypeScript — types, ESLint, Prettier
+        run: npm run check
+      # La partie Rust a besoin de l'interface compilée (dossier `dist`).
+      - name: Interface — compilation
+        run: npm run build
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Rust — mise en forme
+        working-directory: src-tauri
+        run: cargo fmt --check
+      - name: Rust — clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -W clippy::pedantic -D warnings
+      - name: Rust — tests
+        working-directory: src-tauri
+        run: cargo test

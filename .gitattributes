@@ -1,0 +1,9 @@
+# Fins de ligne : les fichiers texte sont stockés avec des fins de ligne
+# Unix (LF) dans le dépôt, quel que soit le système de la personne qui les
+# enregistre. Évite les différences parasites entre Windows et le reste.
+* text=auto eol=lf
+
+# Fichiers binaires : jamais modifiés par git.
+*.png binary
+*.ico binary
+*.icns binary
