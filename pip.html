@@ -1,0 +1,29 @@
+<!doctype html>
+<!--
+  Le bandeau (« pip », pour picture-in-picture) : une petite fenêtre sans
+  bordure, toujours au-dessus des autres. Sa logique est dans src/pip.ts.
+  Elle est « non activable » ("focusable": false dans tauri.conf.json) : un
+  clic agit tout de suite, sans lui donner le focus ; le jeu garde donc le
+  focus et deux clics rapides sur deux pseudos marchent tous les deux.
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dofus Organizer — bandeau</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/pip.ts" defer></script>
+  </head>
+
+  <body>
+    <div id="root" class="pip">
+      <!-- `data-tauri-drag-region` : tirer sur cet élément déplace la fenêtre
+           (il n'y a pas de barre de titre pour le faire). -->
+      <span class="grip" data-tauri-drag-region title="Déplacer le bandeau">⠿</span>
+      <div id="characters" class="characters"></div>
+      <button id="invite-button" class="small" type="button">👥</button>
+      <button id="pause-button" class="small" type="button">⏸</button>
+      <button id="restore-button" class="small" type="button" title="Afficher l'organizer" aria-label="Afficher l'organizer">⤢</button>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<!--
+  La structure de la fenêtre principale. Elle ne contient que des
+  « emplacements » vides (repérés par leur id) : c'est src/main.ts qui les
+  remplit avec les données envoyées par la partie Rust.
+  Les textes de classe « help » peuvent être masqués avec le bouton « ? ».
+-->
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dofus Organizer</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <main id="root" class="main">
+      <!-- La fenêtre n'a pas de cadre Windows : l'en-tête sert de barre de
+           titre. `data-tauri-drag-region` permet de la déplacer en le tirant
+           (sur l'en-tête et le titre eux-mêmes, pas sur les boutons). -->
+      <header data-tauri-drag-region>
+        <h1 data-tauri-drag-region>Dofus Organizer</h1>
+        <div class="tools">
+          <button id="help-button" class="small" type="button" title="Afficher ou masquer l'aide" aria-label="Afficher ou masquer l'aide">?</button>
+          <button id="theme-button" class="small" type="button" title="Passer en mode sombre ou clair" aria-label="Passer en mode sombre ou clair">☾</button>
+          <button id="pause-button" class="small" type="button">⏸</button>
+          <button id="pip-button" class="small" type="button" title="Afficher ou cacher le bandeau" aria-label="Afficher ou cacher le bandeau">▭</button>
+          <button id="minimize-button" class="small" type="button" title="Masquer dans la barre des tâches" aria-label="Masquer dans la barre des tâches">—</button>
+          <button id="close-button" class="small close" type="button" title="Quitter l'organizer" aria-label="Quitter l'organizer">✕</button>
+        </div>
+      </header>
+
+      <section>
+        <h2>Fenêtres de jeu</h2>
+        <p class="help">
+          Cochez les fenêtres entre lesquelles naviguer avec « fenêtre suivante /
+          précédente ». Glissez une ligne par sa poignée ⠿ pour changer l'ordre.
+          La couronne désigne le chef de groupe : survolez une ligne et cliquez
+          sur sa couronne pour la lui donner. Le champ de droite donne un
+          raccourci propre au personnage (facultatif, marche même s'il est
+          décoché).
+        </p>
+        <ul id="window-list" class="window-list"></ul>
+      </section>
+
+      <section>
+        <h2>Groupe</h2>
+        <p class="help">
+          La commande invite les fenêtres cochées, sauf le chef (couronne).
+          Collez-la dans le chat du chef.
+        </p>
+        <div class="invites">
+          <button id="copy-invites" type="button">Copier les invitations</button>
+          <span id="copy-confirmation" class="confirmation" aria-live="polite"></span>
+        </div>
+        <code id="invite-preview" class="preview"></code>
+      </section>
+
+      <section>
+        <h2>Raccourcis</h2>
+        <p class="help">
+          Ils ne marchent que quand une fenêtre Dofus ou l'organizer est au
+          premier plan : ailleurs, les touches gardent leur effet normal.
+          Pour en définir un, ici ou dans la liste : cliquez dans le champ puis
+          appuyez sur la combinaison voulue (Échap pour annuler).
+          L'interrupteur (ou le bouton ⏸) coupe tous les autres raccourcis
+          jusqu'à ce qu'on le presse à nouveau.
+        </p>
+        <div id="shortcuts" class="shortcuts"></div>
+        <ul id="errors" class="errors" aria-live="polite"></ul>
+      </section>
+
+      <section>
+        <h2>Bandeau</h2>
+        <p class="help">
+          Un petit bandeau toujours visible, à placer dans un coin de l'écran :
+          un clic sur un pseudo affiche sa fenêtre, ⤢ fait revenir l'organizer.
+          On le déplace en tirant sur ⠿.
+        </p>
+        <label class="option">
+          <input id="pip-on-minimize" type="checkbox" />
+          Afficher le bandeau quand l'organizer est masqué
+        </label>
+      </section>
+
+      <!-- `<details>` : une section repliable, ouverte d'un clic sur son titre. -->
+      <details class="advanced">
+        <summary>Avancé</summary>
+        <label class="option">
+          <input id="distinguish-sides" type="checkbox" />
+          Distinguer les touches gauche et droite (Ctrl, Alt, Maj, Win)
+        </label>
+        <p class="help">
+          Permet par exemple d'avoir un raccourci sur Alt gauche + P et un autre
+          sur Alt droit + P. Les raccourcis Windows ne savent pas faire cette
+          différence : l'organizer écoute alors lui-même le clavier, et
+          seulement quand une fenêtre Dofus ou l'organizer est au premier plan.
+          Une fois l'option cochée, saisissez à nouveau les raccourcis
+          concernés.
+        </p>
+      </details>
+    </main>
+  </body>
+</html>

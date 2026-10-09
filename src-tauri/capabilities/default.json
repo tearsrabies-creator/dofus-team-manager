@@ -1,0 +1,18 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Droits accordés à l'interface (fenêtre principale et bandeau). Nos propres commandes (lib.rs) sont toujours autorisées ; on liste ici les fonctions de Tauri utilisées depuis le TypeScript, en plus de celles de base.",
+  "windows": ["main", "pip"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-size",
+    "core:window:allow-set-position",
+    "core:window:allow-minimize",
+    "core:window:allow-unminimize",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
+  ]
+}

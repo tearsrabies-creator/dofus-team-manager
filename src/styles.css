@@ -1,0 +1,455 @@
+/*
+  Le style des deux fenêtres (principale et bandeau).
+
+  Les couleurs sont définies une seule fois sous forme de variables (--nom).
+  Le thème clair est la valeur de base ; le thème sombre redéfinit les mêmes
+  variables quand la page porte l'attribut data-theme="dark" (posé par
+  common.ts selon le choix de l'utilisateur).
+*/
+
+:root {
+  --bg: #f4f1ea;
+  --surface: #ffffff;
+  --text: #1f1d1a;
+  --text-muted: #6b655c;
+  --border: #ddd6c8;
+  --accent: #b5651d;
+  --accent-text: #ffffff;
+  --active: #fbe9d6;
+  --error: #b3261e;
+
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--bg);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #1b1a18;
+  --surface: #26241f;
+  --text: #ece7de;
+  --text-muted: #a59d90;
+  --border: #3a372f;
+  --accent: #e08a3c;
+  --accent-text: #1b1a18;
+  --active: #3d2c1b;
+  --error: #f2867d;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* La fenêtre prend la taille du contenu (voir fitWindowToContent) :
+   jamais de barre de défilement. */
+html,
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+button.small {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+}
+
+button.small[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* La poignée (lignes de la liste et bandeau). */
+.grip {
+  padding: 0 2px;
+  color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+  touch-action: none; /* pas de défilement au doigt : on glisse la ligne */
+}
+
+/* Pastille de classe (voir classes.ts) : le symbole de la classe. */
+.class-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.class-badge img {
+  width: 100%;
+  height: 100%;
+}
+
+/* Classe inconnue ou fenêtre non connectée : rond gris avec une lettre. */
+.class-badge.unknown {
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* ======================= Fenêtre principale ======================= */
+
+/* `width: max-content` : le bloc prend la largeur de son contenu le plus
+   large (les lignes de la liste), au lieu de celle de la fenêtre. */
+.main {
+  width: max-content;
+  min-width: 22rem;
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* L'en-tête sert de barre de titre (fenêtre sans cadre Windows) :
+   pas de sélection de texte quand on le tire pour déplacer la fenêtre. */
+header {
+  user-select: none;
+}
+
+.tools {
+  display: flex;
+  gap: 4px;
+}
+
+/* La croix : rouge au survol, comme celle de Windows. */
+button.small.close:hover {
+  background: #c42b1c;
+  border-color: #c42b1c;
+  color: #ffffff;
+}
+
+h1 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 4px;
+}
+
+/* `width: 0; min-width: 100%` : l'aide ne fait jamais élargir la fenêtre,
+   elle se plie à la largeur donnée par le reste du contenu. */
+.help {
+  width: 0;
+  min-width: 100%;
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.no-help .help {
+  display: none;
+}
+
+/* --- Liste des fenêtres --- */
+
+.window-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.window-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.window-row.active {
+  background: var(--active);
+  border-color: var(--accent);
+}
+
+/* La ligne qu'on fait glisser : légèrement soulevée. */
+.window-row.dragging {
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.25);
+  border-color: var(--accent);
+}
+
+.window-row.dragging .grip {
+  cursor: grabbing;
+}
+
+.window-row.unselected .name,
+.window-row.unselected .number,
+.window-row.unselected .class-badge {
+  opacity: 0.5;
+}
+
+.number {
+  min-width: 1.2em;
+  text-align: center;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.name {
+  flex: 1;
+  min-width: 8em;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* La classe s'affiche sous le nom. */
+.name small {
+  display: block;
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* La couronne (liste et bandeau, voir crownButton dans common.ts) : seule
+   celle du chef est visible. Sur les autres personnages, elle n'apparaît
+   qu'au survol de leur ligne ou de leur groupe (`.crown-host`), ou au
+   clavier, pour pouvoir la donner. */
+button.crown {
+  border: none;
+  padding: 0 2px;
+  font-size: 1rem;
+  opacity: 0;
+}
+
+.crown-host:hover button.crown,
+button.crown:focus-visible {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.crown-host:hover button.crown:hover {
+  opacity: 0.9;
+  filter: none;
+}
+
+button.crown[aria-pressed="true"],
+.crown-host:hover button.crown[aria-pressed="true"] {
+  opacity: 1;
+  filter: none;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* --- Invitations --- */
+
+.invites {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.confirmation {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Même astuce que pour l'aide : l'aperçu ne fait pas élargir la fenêtre. */
+.preview {
+  display: block;
+  width: 0;
+  min-width: 100%;
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: Consolas, monospace;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+/* --- Champs de raccourci (dans la liste et dans la section Raccourcis) --- */
+
+input.shortcut {
+  width: 7.5em;
+  padding: 3px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+input.shortcut:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+/* Dans la liste, le bouton ✕ qui suit un champ vide est masqué (sa place
+   reste réservée pour que les lignes restent alignées).
+   `:placeholder-shown` = le champ est vide et affiche son texte d'exemple ;
+   `+ button` = le bouton placé juste après. */
+.window-row input.shortcut:placeholder-shown + button {
+  visibility: hidden;
+}
+
+/* Section Raccourcis : grille libellé + champ | bouton effacer */
+
+.shortcuts {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.shortcuts label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.errors {
+  width: 0;
+  min-width: 100%;
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--error);
+}
+
+.errors:empty {
+  display: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Section « Avancé », repliable. */
+.advanced summary {
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.advanced[open] summary {
+  margin-bottom: 8px;
+}
+
+.advanced .help {
+  margin-top: 6px;
+}
+
+/* ============================ Bandeau ============================ */
+
+.pip {
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.pip .grip {
+  padding: 0 4px;
+  cursor: move;
+}
+
+.characters {
+  display: flex;
+  gap: 4px;
+}
+
+/* Un personnage du bandeau : un encadré qui contient le bouton du pseudo et
+   sa couronne. */
+.character {
+  display: inline-flex;
+  align-items: center;
+  padding-right: 3px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.character:hover {
+  border-color: var(--accent);
+}
+
+.character.active {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.character.unselected {
+  opacity: 0.55;
+}
+
+/* Le bouton du pseudo : transparent, c'est l'encadré qui porte l'apparence. */
+button.character-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px 2px 3px;
+  background: transparent;
+  color: inherit;
+  white-space: nowrap;
+}
+
+button.character-name .class-badge {
+  width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+}
+
+.pip button.crown {
+  padding: 0 1px;
+  font-size: 11px;
+}
+
+.pip button.small {
+  padding: 1px 6px;
+}
