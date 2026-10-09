@@ -1,0 +1,7 @@
+# Version de Rust utilisée pour ce projet, sur toutes les machines et dans les
+# vérifications automatiques de GitHub : une nouvelle version de Rust (et ses
+# nouvelles règles clippy) ne peut pas casser la compilation sans prévenir.
+# Pour passer à une version plus récente, changer le numéro ici.
+[toolchain]
+channel = "1.94.1"
+components = ["rustfmt", "clippy"]

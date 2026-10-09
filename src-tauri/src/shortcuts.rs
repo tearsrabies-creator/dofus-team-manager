@@ -212,7 +212,7 @@ mod tests {
             ..Default::default()
         };
         let (bindings, errors) = build_bindings(&shortcuts, Mode::ToggleOnly);
-        assert!(errors.is_empty());
+        assert_eq!(errors, Vec::<String>::new());
         assert_eq!(bindings.len(), 1);
         assert!(matches!(bindings[0].action, Action::TogglePause));
     }

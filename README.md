@@ -47,7 +47,7 @@ La touche est désignée par sa **position physique** (nom QWERTY) : `KeyQ` est 
 
 ## Développer
 
-Il faut [Rust](https://rustup.rs/) (1.82 ou plus récent), [Node.js](https://nodejs.org/) et les « Build Tools » C++ de Visual Studio.
+Il faut [Rust](https://rustup.rs/), [Node.js](https://nodejs.org/) et les « Build Tools » C++ de Visual Studio. La version de Rust est fixée dans `src-tauri/rust-toolchain.toml` : `rustup` l'installe tout seul à la première compilation.
 
 ```sh
 npm install          # une seule fois : installe les outils de l'interface
