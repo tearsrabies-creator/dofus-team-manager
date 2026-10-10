@@ -4,7 +4,7 @@
 
 [package]
 name = "dofus-team-manager"
-version = "0.3.0"
+version = "0.3.1"
 description = "Gestionnaire d'équipe multicompte pour Dofus : navigation entre fenêtres et invitations de groupe"
 authors = ["Contributeurs de Dofus Team Manager"]
 edition = "2021"
