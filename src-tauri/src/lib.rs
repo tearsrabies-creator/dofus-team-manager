@@ -98,6 +98,13 @@ pub(crate) struct GameWindow {
     number: Option<usize>,
 }
 
+impl GameWindow {
+    /// L'identifiant Windows de la fenêtre.
+    pub(crate) fn id(&self) -> isize {
+        self.id
+    }
+}
+
 /// Rassemble les fenêtres Dofus ouvertes, triées dans l'ordre choisi, avec
 /// leur état (cochée, active, chef, numéro). Ajoute au passage les nouveaux
 /// personnages à la configuration (et l'enregistre si elle a changé).
@@ -283,6 +290,7 @@ pub fn run() {
             commands::is_paused,
             commands::activate_window,
             commands::copy_text,
+            commands::reorder_taskbar,
             commands::pending_update,
             commands::install_update
         ])

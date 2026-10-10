@@ -4,6 +4,7 @@ Petit gestionnaire d'équipe multicompte pour Dofus (Windows), inspiré du modul
 
 - détecte les fenêtres Dofus ouvertes et reconnaît le personnage et sa classe grâce au titre de la fenêtre, avec le symbole de la classe ;
 - permet de **cocher** les fenêtres entre lesquelles on navigue, et de choisir leur **ordre** en glissant les lignes par leur poignée ⠿ (gardé d'une session à l'autre) ;
+- un bouton **« Ranger la barre des tâches »** remet les fenêtres Dofus de la barre des tâches dans l'ordre de la liste ;
 - **raccourcis clavier globaux**, avec n'importe quelle combinaison (Ctrl + Alt + P…) : fenêtre suivante et précédente (parmi les fenêtres cochées), un raccourci facultatif par personnage, et un **interrupteur** qui coupe ou réactive tous les autres. Ils ne sont actifs que quand une fenêtre Dofus ou l'application est au premier plan. Une option avancée permet de **distinguer gauche et droite** (Alt G / Alt D, Ctrl G / Ctrl D…) ;
 - une **couronne 👑** unique à donner au chef de groupe ;
 - bouton **« Copier les invitations »** : met dans le presse-papiers `/invite Perso2; /invite Perso3…` (toutes les fenêtres cochées sauf le chef) pour former le groupe. Sans couronne, le personnage dont la fenêtre Dofus est au premier plan la reçoit ;

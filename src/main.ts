@@ -418,9 +418,25 @@ async function installUpdate(): Promise<void> {
   }
 }
 
+/**
+ * Range les boutons des fenêtres Dofus de la barre des tâches dans l'ordre de
+ * la liste (voir `reorder_taskbar` dans game_windows.rs).
+ */
+async function onReorderTaskbar(): Promise<void> {
+  const confirmation = el("reorder-confirmation");
+  try {
+    await invoke("reorder_taskbar");
+    confirmation.textContent = "Rangé !";
+  } catch (error) {
+    confirmation.textContent = `Échec : ${String(error)}`;
+  }
+  setTimeout(() => (confirmation.textContent = ""), 2000);
+}
+
 /** Branche les boutons et cases de la page sur leurs actions. */
 function bindControls(): void {
   el("copy-invites").addEventListener("click", handler(onCopyInvites));
+  el("reorder-taskbar").addEventListener("click", handler(onReorderTaskbar));
   el("update-button").addEventListener("click", handler(installUpdate));
   el("help-button").addEventListener("click", toggleHelp);
   el("theme-button").addEventListener("click", toggleTheme);

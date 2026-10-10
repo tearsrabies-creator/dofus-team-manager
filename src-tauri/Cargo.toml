@@ -47,6 +47,8 @@ windows = { version = "0.61", features = [
   "Win32_System_Ole",                 # CF_UNICODETEXT (format « texte » du presse-papiers)
   "Win32_UI_Input_KeyboardAndMouse",  # SendInput, RegisterHotKey, état des touches
   "Win32_UI_Accessibility",           # SetWinEventHook (être prévenu des changements de premier plan)
+  "Win32_UI_Shell",                   # ITaskbarList (ordre des boutons de la barre des tâches)
+  "Win32_System_Com",                 # CoCreateInstance (pour obtenir ITaskbarList)
   "Win32_System_SystemInformation",   # GetLocalTime (date et heure du journal des problèmes)
 ] }
 # Plugin officiel de mise à jour automatique (voir updater.rs).

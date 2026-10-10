@@ -104,6 +104,23 @@ pub fn activate_window(id: isize) -> Result<(), String> {
     game_windows::activate(id)
 }
 
+/// Range les boutons des fenêtres Dofus dans la barre des tâches, dans
+/// l'ordre de la liste de l'application.
+///
+/// Commande `async` : le rangement prend un peu de temps (voir
+/// `game_windows.rs`). `spawn_blocking` l'exécute sur un thread à part, et
+/// l'interface reste réactive en attendant la réponse.
+#[tauri::command]
+pub async fn reorder_taskbar(state: State<'_, AppState>) -> Result<(), String> {
+    let ids: Vec<isize> = crate::collect_game_windows(&state)
+        .iter()
+        .map(GameWindow::id)
+        .collect();
+    tauri::async_runtime::spawn_blocking(move || game_windows::reorder_taskbar(&ids))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 /// Met un texte dans le presse-papiers (bouton des invitations de groupe).
 #[tauri::command]
 pub fn copy_text(app: AppHandle, text: String) -> Result<(), String> {

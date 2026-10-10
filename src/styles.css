@@ -281,6 +281,14 @@ button.crown[aria-pressed="true"],
   font-style: italic;
 }
 
+/* Bouton sous la liste des fenêtres. */
+.list-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
 /* --- Invitations --- */
 
 .invites {

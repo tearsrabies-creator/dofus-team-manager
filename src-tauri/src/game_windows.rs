@@ -26,6 +26,9 @@
 
 use windows::core::{BOOL, PWSTR};
 use windows::Win32::Foundation::{CloseHandle, HWND, LPARAM, TRUE};
+use windows::Win32::System::Com::{
+    CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED,
+};
 use windows::Win32::System::Threading::{
     GetCurrentProcessId, OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
     PROCESS_QUERY_LIMITED_INFORMATION,
@@ -34,6 +37,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
     VK_MENU,
 };
+use windows::Win32::UI::Shell::{ITaskbarList, TaskbarList};
 use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetForegroundWindow, GetWindow, GetWindowThreadProcessId, InternalGetWindowText,
     IsIconic, IsWindow, IsWindowVisible, SetForegroundWindow, ShowWindowAsync, GW_OWNER,
@@ -101,6 +105,51 @@ pub fn is_allowed_foreground(id: isize) -> bool {
     }
     let pid = process_of(HWND(id as *mut _));
     pid == unsafe { GetCurrentProcessId() } || is_dofus_client(pid)
+}
+
+/// La pause entre deux demandes à la barre des tâches (voir `reorder_taskbar`).
+const TASKBAR_STEP_DELAY: std::time::Duration = std::time::Duration::from_millis(150);
+
+/// Range les boutons de ces fenêtres dans la barre des tâches, dans l'ordre
+/// donné.
+///
+/// Windows ne permet pas de choisir directement la place d'un bouton. Mais
+/// un bouton retiré puis remis (`DeleteTab` puis `AddTab`) se place à la
+/// fin : en le faisant pour chaque fenêtre, dans l'ordre voulu, on obtient
+/// cet ordre. On passe par l'Explorateur Windows (qui gère la barre des
+/// tâches) : rien n'est demandé aux fenêtres Dofus elles-mêmes.
+///
+/// L'Explorateur traite ces demandes un peu plus tard : si le retrait et
+/// l'ajout arrivent ensemble, ils s'annulent et rien ne bouge (vérifié). On
+/// laisse donc une courte pause entre chaque étape. Cette fonction prend
+/// ainsi quelques dixièmes de seconde par fenêtre : à appeler hors du thread
+/// principal, pour ne pas figer l'interface.
+///
+/// `ITaskbarList` est une interface COM, le système de composants de
+/// Windows : on en demande une avec `CoCreateInstance`, puis on appelle ses
+/// méthodes.
+pub fn reorder_taskbar(ids: &[isize]) -> Result<(), String> {
+    unsafe {
+        // COM doit être initialisé sur ce thread. Il l'est déjà en général
+        // (par le moteur d'affichage) : le résultat est alors « déjà fait »,
+        // qu'on ignore volontairement.
+        let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+        let taskbar: ITaskbarList = CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)
+            .map_err(|e| format!("Barre des tâches inaccessible ({e})."))?;
+        taskbar.HrInit().map_err(|e| e.to_string())?;
+        for &id in ids {
+            let hwnd = HWND(id as *mut _);
+            // Une fenêtre fermée entre-temps est simplement ignorée.
+            if !IsWindow(Some(hwnd)).as_bool() {
+                continue;
+            }
+            let _ = taskbar.DeleteTab(hwnd);
+            std::thread::sleep(TASKBAR_STEP_DELAY);
+            taskbar.AddTab(hwnd).map_err(|e| e.to_string())?;
+            std::thread::sleep(TASKBAR_STEP_DELAY);
+        }
+    }
+    Ok(())
 }
 
 /// Met la fenêtre `id` au premier plan.
