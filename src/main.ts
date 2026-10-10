@@ -350,25 +350,33 @@ async function togglePip(): Promise<void> {
 }
 
 /**
- * Réagit quand l'application est réduite ou revient, quelle qu'en soit la façon
- * (notre bouton —, celui de Windows, un clic dans la barre des tâches...).
- * Windows signale ces changements comme des redimensionnements.
+ * Bouton — : cache la fenêtre principale. Elle disparaît aussi de la barre
+ * des tâches ; seule reste l'icône dans la zone de notification, près de
+ * l'horloge (voir tray.rs), qui la fait revenir d'un clic. Le bandeau
+ * s'ouvre à sa place si l'option est cochée.
  */
-async function watchMinimize(): Promise<void> {
-  const main = getCurrentWindow();
-  await main.onResized(
+async function hideToTray(): Promise<void> {
+  const pip = await pipWindow();
+  if (pip && pipOnMinimize() && !(await pip.isVisible())) {
+    await pip.show();
+    pipOpenedByMinimize = true;
+  }
+  await getCurrentWindow().hide();
+}
+
+/**
+ * Quand la fenêtre principale revient (icône de la zone de notification,
+ * bouton ⤢ du bandeau...), on referme le bandeau s'il avait été ouvert
+ * automatiquement par le masquage. `visibilitychange` est l'événement du
+ * navigateur qui signale qu'une page est cachée ou de nouveau visible.
+ */
+function watchVisibility(): void {
+  document.addEventListener(
+    "visibilitychange",
     handler(async () => {
-      const pip = await pipWindow();
-      if (!pip) return;
-      if (await main.isMinimized()) {
-        if (pipOnMinimize() && !(await pip.isVisible())) {
-          await pip.show();
-          pipOpenedByMinimize = true;
-        }
-      } else if (pipOpenedByMinimize) {
-        await pip.hide();
-        pipOpenedByMinimize = false;
-      }
+      if (document.hidden || !pipOpenedByMinimize) return;
+      pipOpenedByMinimize = false;
+      await (await pipWindow())?.hide();
     }),
   );
 }
@@ -418,9 +426,7 @@ function bindControls(): void {
   el("theme-button").addEventListener("click", toggleTheme);
   el("pause-button").addEventListener("click", () => fireAndForget(invoke("toggle_pause")));
   el("pip-button").addEventListener("click", handler(togglePip));
-  el("minimize-button").addEventListener("click", () =>
-    fireAndForget(getCurrentWindow().minimize()),
-  );
+  el("minimize-button").addEventListener("click", handler(hideToTray));
   // Fermer la fenêtre principale quitte toute l'application (voir lib.rs).
   el("close-button").addEventListener("click", () => fireAndForget(getCurrentWindow().close()));
 
@@ -493,7 +499,7 @@ async function start(): Promise<void> {
   await refresh(true);
 
   bindControls();
-  await watchMinimize();
+  watchVisibility();
   refreshWhileVisible(() => fireAndForget(refresh()), REFRESH_INTERVAL_MS);
   await listenToRust();
   // La mise à jour a pu être prête avant qu'on écoute l'événement.

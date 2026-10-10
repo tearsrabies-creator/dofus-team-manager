@@ -29,7 +29,7 @@ pub fn list_windows(state: State<AppState>) -> Vec<GameWindow> {
 /// Rend la configuration actuelle.
 #[tauri::command]
 pub fn read_config(state: State<AppState>) -> Config {
-    state.config.lock().unwrap().clone()
+    crate::lock(&state.config).clone()
 }
 
 /// Enregistre une nouvelle configuration et réapplique les raccourcis.
@@ -41,7 +41,7 @@ pub fn save_config(
     config: Config,
 ) -> Result<Vec<String>, String> {
     config.save(&state.config_path)?;
-    *state.config.lock().unwrap() = config;
+    *crate::lock(&state.config) = config;
     Ok(shortcuts::sync(&app, true))
 }
 
@@ -56,7 +56,7 @@ pub fn set_leader(
     character: Option<String>,
 ) -> Result<(), String> {
     {
-        let mut config = state.config.lock().unwrap();
+        let mut config = crate::lock(&state.config);
         config.leader = character;
         config.save(&state.config_path)?;
     } // le verrou est relâché ici, avant de prévenir l'interface
@@ -69,14 +69,14 @@ pub fn set_leader(
 /// le champ de saisie si elle est déjà utilisée.
 #[tauri::command]
 pub fn suspend_shortcuts(app: AppHandle, state: State<AppState>) {
-    state.control.lock().unwrap().capturing = true;
+    crate::lock(&state.control).capturing = true;
     shortcuts::sync(&app, false);
 }
 
 /// Réenregistre les raccourcis à la fin d'une saisie.
 #[tauri::command]
 pub fn resume_shortcuts(app: AppHandle, state: State<AppState>) -> Vec<String> {
-    state.control.lock().unwrap().capturing = false;
+    crate::lock(&state.control).capturing = false;
     shortcuts::sync(&app, true)
 }
 
@@ -89,7 +89,7 @@ pub fn toggle_pause(app: AppHandle) -> bool {
 /// Vrai si les raccourcis sont coupés.
 #[tauri::command]
 pub fn is_paused(state: State<AppState>) -> bool {
-    state.control.lock().unwrap().paused
+    crate::lock(&state.control).paused
 }
 
 /// Met une fenêtre de jeu au premier plan (clic sur un pseudo du bandeau).

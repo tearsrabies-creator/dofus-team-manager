@@ -8,6 +8,8 @@ Petit gestionnaire d'équipe multicompte pour Dofus (Windows), inspiré du modul
 - une **couronne 👑** unique à donner au chef de groupe ;
 - bouton **« Copier les invitations »** : met dans le presse-papiers `/invite Perso2; /invite Perso3…` (toutes les fenêtres cochées sauf le chef) pour former le groupe. Sans couronne, le personnage dont la fenêtre Dofus est au premier plan la reçoit ;
 - un **bandeau** toujours au premier plan, à placer dans un coin : un clic sur un pseudo affiche sa fenêtre, la couronne (au survol) en fait le chef, 👥 copie les invitations de groupe, ⏸ coupe les raccourcis, ⤢ fait revenir l'application. Il peut s'ouvrir automatiquement quand on masque l'application ;
+- le bouton — **cache l'application dans la zone de notification** (près de l'horloge, du volume et de la langue du clavier) : un clic sur l'icône la fait revenir, un clic droit ouvre un menu (afficher, bandeau, quitter). Windows range d'abord les nouvelles icônes dans le menu des icônes cachées (^) : faites-la glisser vers la barre des tâches pour qu'elle reste visible ;
+- une seule instance à la fois : relancer l'application réaffiche celle qui tourne déjà ;
 - une fenêtre sans cadre Windows qui prend juste la taille de son contenu (on la déplace en la saisissant n'importe où, hors boutons et champs), des textes d'aide qu'on peut masquer (?), un thème clair ou sombre.
 
 Ce que l'outil ne fait **pas**, volontairement : pas de connexion des comptes, pas de lecture de la mémoire du jeu, pas d'injection, pas de lecture du réseau. Il gère seulement des fenêtres Windows, comme nAiO.
@@ -28,6 +30,10 @@ Configuration requise : Windows 10 ou 11 (64 bits). L'application s'appuie sur W
 
 **Anciennes versions** : l'installateur remplace la version déjà installée. Il désinstalle aussi automatiquement « Dofus Organizer », l'ancien nom de l'application (0.1.0), dont les réglages sont repris.
 **Désinstaller** : Paramètres Windows > Applications > Dofus Team Manager > Désinstaller.
+
+## En cas de problème
+
+L'application tient un journal des problèmes : `%LOCALAPPDATA%\com.dofusteammanager.desktop\logs\crash.log`. Si elle se ferme toute seule ou se comporte bizarrement, ce fichier indique la version, l'heure et l'endroit exact du code en cause : joignez-le à votre signalement. Le journal ne contient aucune donnée personnelle (pas de noms de personnages).
 
 ## Ne pas gêner le jeu
 
@@ -122,6 +128,8 @@ Le code (noms de fichiers, de variables, de fonctions) est en anglais ; les comm
 | `src-tauri/src/clipboard.rs`               | Écrire dans le presse-papiers (marche aussi depuis le bandeau, qui n'a jamais le focus).                                           |
 | `src-tauri/src/updater.rs`                 | La mise à jour automatique (vérification, téléchargement, installation).                                                           |
 | `src-tauri/windows/hooks.nsh`              | Ajout à l'installateur Windows : désinstalle l'ancienne « Dofus Organizer ».                                                       |
+| `src-tauri/src/tray.rs`                    | L'icône dans la zone de notification et son menu.                                                                                  |
+| `src-tauri/src/crash_log.rs`               | Le journal des problèmes (paniques, erreurs de mise à jour).                                                                       |
 | `src-tauri/src/commands.rs`                | Les commandes appelables par l'interface.                                                                                          |
 | `src-tauri/src/lib.rs`                     | L'état partagé, les actions, et le démarrage qui relie le tout.                                                                    |
 | `src/common.ts`                            | Ce qui sert aux deux fenêtres : types, invitations, couronne, préférences, taille automatique.                                     |

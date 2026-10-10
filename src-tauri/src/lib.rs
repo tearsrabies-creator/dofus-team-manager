@@ -12,7 +12,9 @@
 //! - `input`        : l'écoute du clavier, sur son propre thread ;
 //! - `clipboard`    : écrire dans le presse-papiers ;
 //! - `commands`     : les commandes appelables par l'interface ;
-//! - `updater`      : la mise à jour automatique.
+//! - `updater`      : la mise à jour automatique ;
+//! - `tray`         : l'icône dans la zone de notification ;
+//! - `crash_log`    : le journal des problèmes.
 //!
 //! Légèreté : rien ne tourne en boucle côté Rust. Le programme ne se réveille
 //! que pour un raccourci, un changement de premier plan ou une demande de
@@ -23,16 +25,18 @@ mod clipboard;
 mod combo;
 mod commands;
 mod config;
+mod crash_log;
 mod foreground;
 mod game_windows;
 mod input;
 mod navigation;
 mod shortcuts;
+mod tray;
 mod updater;
 
 use serde::Serialize;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard, PoisonError};
 use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 
 use config::Config;
@@ -49,14 +53,25 @@ const PREVIOUS_IDENTIFIER: &str = "com.dofusorganizer.desktop";
 /// données. Un `Mutex` (« exclusion mutuelle ») protège une donnée : pour la
 /// lire ou la modifier, il faut d'abord la verrouiller avec `.lock()`, et une
 /// seule partie du programme peut la tenir à la fois. Le verrou est relâché
-/// automatiquement à la fin du bloc où il a été pris.
-/// (`.unwrap()` après `.lock()` arrête le programme si une autre partie a
-/// planté en tenant le verrou : ça ne devrait jamais arriver.)
+/// automatiquement à la fin du bloc où il a été pris. On verrouille toujours
+/// avec la fonction `lock` ci-dessous.
 pub struct AppState {
     pub(crate) config: Mutex<Config>,
     pub(crate) config_path: PathBuf,
     /// Ce qui décide quels raccourcis sont actifs (voir shortcuts.rs).
     pub(crate) control: Mutex<Control>,
+}
+
+/// Verrouille un `Mutex` et rend la donnée protégée.
+///
+/// Si une autre partie du programme a « paniqué » (erreur imprévue) en
+/// tenant ce verrou, Rust le marque comme « empoisonné » et `lock().unwrap()`
+/// ferait planter tout le programme à chaque utilisation suivante. Ici, on
+/// récupère quand même la donnée (`PoisonError::into_inner`) : une erreur
+/// isolée, déjà notée dans le journal (voir `crash_log.rs`), n'entraîne pas
+/// toute l'application avec elle.
+pub(crate) fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Une fenêtre de jeu telle qu'on l'envoie à l'interface.
@@ -104,7 +119,7 @@ pub(crate) fn collect_game_windows(state: &AppState) -> Vec<GameWindow> {
         })
         .collect();
 
-    let mut config = state.config.lock().unwrap();
+    let mut config = lock(&state.config);
     // On n'enregistre que les vrais personnages, pas les fenêtres non connectées.
     let characters: Vec<String> = infos.iter().filter_map(|i| i.character.clone()).collect();
     if config.add_new_characters(&characters) {
@@ -177,7 +192,7 @@ pub(crate) fn toggle_pause(app: &AppHandle) -> bool {
     // dessus : on la range dans une variable (sinon, erreur E0716).
     let state = app.state::<AppState>();
     let paused = {
-        let mut control = state.control.lock().unwrap();
+        let mut control = lock(&state.control);
         control.paused = !control.paused;
         control.paused
     };
@@ -194,11 +209,7 @@ pub(crate) fn toggle_pause(app: &AppHandle) -> bool {
 /// (`msedgewebview2.exe`). On redemande donc la vraie fenêtre au premier plan.
 pub(crate) fn on_foreground_changed(app: &AppHandle) {
     let allowed = game_windows::is_allowed_foreground(game_windows::foreground());
-    app.state::<AppState>()
-        .control
-        .lock()
-        .unwrap()
-        .foreground_allowed = allowed;
+    lock(&app.state::<AppState>().control).foreground_allowed = allowed;
     shortcuts::sync(app, false);
     // L'interface met à jour la fenêtre active (si elle est visible).
     let _ = app.emit("foreground-changed", ());
@@ -213,10 +224,19 @@ pub(crate) fn on_foreground_changed(app: &AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Instance unique : si l'application est relancée alors qu'elle tourne
+        // déjà (depuis le menu Démarrer par exemple), la nouvelle s'arrête
+        // aussitôt et c'est la première qui se réaffiche. Ce plugin doit être
+        // déclaré en premier.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _folder| {
+            tray::show_main(app);
+        }))
         // Le plugin officiel de mise à jour (voir updater.rs).
         .plugin(tauri_plugin_updater::Builder::new().build())
         // `setup` s'exécute une fois au démarrage, sur le thread principal.
         .setup(|app| {
+            // En tout premier : le journal des problèmes (voir crash_log.rs).
+            crash_log::install(&app.path().app_log_dir()?);
             let config_dir = app.path().app_config_dir()?;
             let config_path = config_dir.join("config.json");
             // L'application s'appelait « Dofus Organizer » jusqu'à la 0.1.0 :
@@ -237,6 +257,8 @@ pub fn run() {
             // demande à Windows de nous prévenir de chaque changement.
             on_foreground_changed(app.handle());
             foreground::watch(app.handle().clone());
+            // L'icône dans la zone de notification (voir tray.rs).
+            tray::create(app)?;
             // Cherche une nouvelle version en arrière-plan (version installée seulement).
             updater::check_in_background(app.handle());
             Ok(())

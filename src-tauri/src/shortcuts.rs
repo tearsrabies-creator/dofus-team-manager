@@ -76,7 +76,7 @@ impl Control {
 /// problèmes rencontrés, pour les afficher dans l'interface.
 pub fn sync(app: &AppHandle, force: bool) -> Vec<String> {
     let state = app.state::<AppState>();
-    let mut control = state.control.lock().unwrap();
+    let mut control = crate::lock(&state.control);
     let mode = control.desired_mode();
     if !force && control.applied == Some(mode) {
         return Vec::new();
@@ -86,7 +86,7 @@ pub fn sync(app: &AppHandle, force: bool) -> Vec<String> {
     // On ne garde le verrou de la configuration que le temps de la lire : il
     // est relâché à la fin de ce bloc, avant de parler au thread clavier.
     let (bindings, mut errors, distinguish_sides) = {
-        let config = state.config.lock().unwrap();
+        let config = crate::lock(&state.config);
         let (bindings, errors) = build_bindings(&config.shortcuts, mode);
         (bindings, errors, config.advanced.distinguish_sides)
     };

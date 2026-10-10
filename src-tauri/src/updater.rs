@@ -39,7 +39,7 @@ pub fn check_in_background(app: &AppHandle) {
         // Sans réseau ou sans nouvelle version, on ne dit rien : on
         // réessaiera au prochain lancement.
         if let Err(error) = check_and_download(&app).await {
-            eprintln!("Mise à jour : {error}");
+            crate::crash_log::write(&format!("Mise à jour impossible : {error}"));
         }
     });
 }
@@ -53,17 +53,14 @@ async fn check_and_download(app: &AppHandle) -> tauri_plugin_updater::Result<()>
     // téléchargement, inutile ici.
     let bytes = update.download(|_, _| {}, || {}).await?;
     let version = update.version.clone();
-    *app.state::<PendingUpdate>().0.lock().unwrap() = Some(ReadyUpdate { update, bytes });
+    *crate::lock(&app.state::<PendingUpdate>().0) = Some(ReadyUpdate { update, bytes });
     let _ = app.emit("update-ready", version);
     Ok(())
 }
 
 /// Le numéro de la version prête à être installée, s'il y en a une.
 pub fn ready_version(app: &AppHandle) -> Option<String> {
-    app.state::<PendingUpdate>()
-        .0
-        .lock()
-        .unwrap()
+    crate::lock(&app.state::<PendingUpdate>().0)
         .as_ref()
         .map(|ready| ready.update.version.clone())
 }
@@ -72,11 +69,10 @@ pub fn ready_version(app: &AppHandle) -> Option<String> {
 /// l'application se ferme, puis elle est relancée une fois la mise à jour
 /// installée.
 pub fn install(app: &AppHandle) -> Result<(), String> {
-    let ready = app
-        .state::<PendingUpdate>()
-        .0
-        .lock()
-        .unwrap()
+    // La « poignée » vers l'état doit vivre aussi longtemps que le verrou :
+    // on la range dans une variable (voir `toggle_pause` dans lib.rs).
+    let pending = app.state::<PendingUpdate>();
+    let ready = crate::lock(&pending.0)
         .take()
         .ok_or("Aucune mise à jour prête.")?;
     ready

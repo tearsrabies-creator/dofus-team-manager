@@ -318,13 +318,18 @@ unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARA
             let up = message == WM_KEYUP || message == WM_SYSKEYUP;
             // `try_borrow_mut` plutôt que `borrow_mut` : si l'état est déjà
             // utilisé (cas qui ne devrait pas arriver), on laisse passer la
-            // touche au lieu de planter.
-            let swallow = STATE.with(|s| match s.try_borrow_mut() {
-                Ok(mut guard) => guard
-                    .as_mut()
-                    .is_some_and(|state| on_key(state, scan, down, up)),
-                Err(_) => false,
-            });
+            // touche au lieu de planter. Et `catch_unwind` : une panique ne
+            // doit jamais sortir d'une fonction appelée par Windows (voir
+            // foreground.rs) ; en cas de problème, la touche passe normalement.
+            let swallow = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                STATE.with(|s| match s.try_borrow_mut() {
+                    Ok(mut guard) => guard
+                        .as_mut()
+                        .is_some_and(|state| on_key(state, scan, down, up)),
+                    Err(_) => false,
+                })
+            }))
+            .unwrap_or(false);
             if swallow {
                 return LRESULT(1);
             }

@@ -55,7 +55,15 @@ unsafe extern "system" fn on_foreground(
     _thread: u32,
     _time: u32,
 ) {
-    if let Some(app) = APP.get() {
-        crate::on_foreground_changed(app);
-    }
+    // Une « panique » (erreur imprévue) ne doit jamais sortir d'une fonction
+    // appelée par Windows : Rust tuerait alors tout le programme, sans
+    // message. `catch_unwind` l'arrête ici ; elle est déjà notée dans le
+    // journal (crash_log.rs) et le programme continue.
+    // `AssertUnwindSafe` : on garantit au compilateur que c'est sans danger
+    // ici (l'état partagé reste utilisable, voir `lock` dans lib.rs).
+    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        if let Some(app) = APP.get() {
+            crate::on_foreground_changed(app);
+        }
+    }));
 }
