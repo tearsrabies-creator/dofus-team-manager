@@ -25,6 +25,7 @@ const REFRESH_INTERVAL_MS = 1500;
 
 const characters = document.getElementById("characters")!;
 const inviteButton = document.getElementById("invite-button") as HTMLButtonElement;
+const reorderButton = document.getElementById("reorder-button")!;
 const pauseButton = document.getElementById("pause-button")!;
 let lastRendered = "";
 // La dernière liste reçue, pour calculer la commande d'invitation au clic.
@@ -111,6 +112,22 @@ async function onCopyInvites(): Promise<void> {
   setTimeout(() => (inviteButton.textContent = "👥"), 1500);
 }
 
+/**
+ * Bouton 🔃 : range les fenêtres Dofus de la barre des tâches dans l'ordre de
+ * la liste (comme le bouton de la fenêtre principale), puis affiche ✓ (ou ✗
+ * en cas d'échec) un court instant.
+ */
+async function onReorderTaskbar(): Promise<void> {
+  let ok = true;
+  try {
+    await invoke("reorder_taskbar");
+  } catch {
+    ok = false;
+  }
+  reorderButton.textContent = ok ? "✓" : "✗";
+  setTimeout(() => (reorderButton.textContent = "🔃"), 1500);
+}
+
 async function start(): Promise<void> {
   applyTheme();
   // `true` : le bandeau reste entièrement sur son écran quand il s'élargit.
@@ -118,6 +135,7 @@ async function start(): Promise<void> {
   document.getElementById("restore-button")!.addEventListener("click", handler(restoreMain));
   pauseButton.addEventListener("click", () => fireAndForget(invoke("toggle_pause")));
   inviteButton.addEventListener("click", handler(onCopyInvites));
+  reorderButton.addEventListener("click", handler(onReorderTaskbar));
   renderPauseButton(pauseButton, await invoke<boolean>("is_paused"));
   await placePip();
 
