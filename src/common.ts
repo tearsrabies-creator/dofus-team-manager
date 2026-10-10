@@ -16,9 +16,50 @@ import { currentMonitor, getCurrentWindow, Window } from "@tauri-apps/api/window
 // développement (clic droit > Inspecter, en mode dev).
 // ---------------------------------------------------------------------------
 
+/**
+ * Signale une erreur : dans la console de développement, et dans le journal
+ * des problèmes (crash.log, voir crash_log.rs) pour la version installée.
+ */
+export function reportError(error: unknown): void {
+  console.error(error);
+  const message =
+    error instanceof Error
+      ? `${error.message}
+${error.stack ?? ""}`
+      : String(error);
+  // Si même l'écriture du journal échoue, on n'insiste pas.
+  invoke("log_error", { message }).catch(() => undefined);
+}
+
 /** Lance une tâche sans l'attendre, en signalant une éventuelle erreur. */
 export function fireAndForget(task: Promise<unknown>): void {
-  task.catch((error: unknown) => console.error(error));
+  task.catch(reportError);
+}
+
+/**
+ * Note aussi dans le journal les erreurs que personne n'a attrapées
+ * (`error` : erreur de code ; `unhandledrejection` : promesse en échec sans
+ * personne pour s'en occuper). À appeler une fois par fenêtre.
+ */
+export function reportUncaughtErrors(): void {
+  window.addEventListener("error", (event) => reportError(event.error ?? event.message));
+  window.addEventListener("unhandledrejection", (event) => reportError(event.reason));
+}
+
+/**
+ * Appelle `task` jusqu'à ce qu'elle réussisse, avec une pause entre deux
+ * essais. Sert au démarrage : un premier appel à Rust qui échoue ne doit pas
+ * laisser la fenêtre vide pour toujours.
+ */
+export async function retry<T>(task: () => Promise<T>, delayMs = 500): Promise<T> {
+  for (;;) {
+    try {
+      return await task();
+    } catch (error) {
+      reportError(error);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
 }
 
 /**

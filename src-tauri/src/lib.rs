@@ -266,6 +266,14 @@ pub fn run() {
             foreground::watch(app.handle().clone());
             // L'icône dans la zone de notification (voir tray.rs).
             tray::create(app)?;
+            // Enfin les fenêtres (« create »: false dans tauri.conf.json). Tauri
+            // les crée d'habitude AVANT cette fonction : leur page pouvait alors
+            // appeler Rust avant que l'état ci-dessus existe, l'appel échouait
+            // et la liste restait vide (surtout à une relance, quand la page
+            // charge plus vite). Créées ici, elles trouvent tout prêt.
+            for window_config in &app.config().app.windows {
+                tauri::WebviewWindowBuilder::from_config(app.handle(), window_config)?.build()?;
+            }
             // Cherche une nouvelle version en arrière-plan (version installée seulement).
             updater::check_in_background(app.handle());
             Ok(())
@@ -280,6 +288,7 @@ pub fn run() {
         })
         // La liste des commandes que l'interface a le droit d'appeler.
         .invoke_handler(tauri::generate_handler![
+            commands::log_error,
             commands::list_windows,
             commands::read_config,
             commands::save_config,

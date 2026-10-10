@@ -13,6 +13,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Dofus Team Manager",
         "width": 420,
         "height": 500,
@@ -22,6 +23,7 @@
       },
       {
         "label": "pip",
+        "create": false,
         "url": "pip.html",
         "title": "Dofus Team Manager — bandeau",
         "width": 240,

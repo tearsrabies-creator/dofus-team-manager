@@ -16,6 +16,7 @@ import {
   placePip,
   refreshWhileVisible,
   renderPauseButton,
+  reportUncaughtErrors,
   restoreMain,
 } from "./common";
 
@@ -136,11 +137,14 @@ async function start(): Promise<void> {
   pauseButton.addEventListener("click", () => fireAndForget(invoke("toggle_pause")));
   inviteButton.addEventListener("click", handler(onCopyInvites));
   reorderButton.addEventListener("click", handler(onReorderTaskbar));
-  renderPauseButton(pauseButton, await invoke<boolean>("is_paused"));
-  await placePip();
-
-  await refresh();
+  // Le rafraîchissement régulier démarre en premier : si un appel à Rust
+  // échoue au démarrage, les pseudos apparaîtront quand même.
   refreshWhileVisible(() => fireAndForget(refresh()), REFRESH_INTERVAL_MS);
+  fireAndForget(refresh());
+  fireAndForget(
+    invoke<boolean>("is_paused").then((paused) => renderPauseButton(pauseButton, paused)),
+  );
+  await placePip();
   // Rust prévient quand la fenêtre active change, quand les raccourcis sont
   // coupés / réactivés, et quand la couronne change (ici ou ailleurs).
   await listen("foreground-changed", () => {
@@ -152,4 +156,5 @@ async function start(): Promise<void> {
   await listen("config-changed", handler(refresh));
 }
 
+reportUncaughtErrors();
 window.addEventListener("DOMContentLoaded", handler(start));

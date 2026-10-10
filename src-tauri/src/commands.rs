@@ -20,6 +20,13 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::config::Config;
 use crate::{clipboard, game_windows, shortcuts, updater, AppState, GameWindow};
 
+/// Note une erreur de l'interface dans le journal des problèmes
+/// (`crash_log.rs`), qui sinon ne voit que les erreurs du code Rust.
+#[tauri::command]
+pub fn log_error(message: String) {
+    crate::crash_log::write(&format!("Interface : {message}"));
+}
+
 /// Liste les fenêtres de jeu pour l'affichage.
 #[tauri::command]
 pub fn list_windows(state: State<AppState>) -> Vec<GameWindow> {

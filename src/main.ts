@@ -31,6 +31,8 @@ import {
   readPref,
   refreshWhileVisible,
   renderPauseButton,
+  reportUncaughtErrors,
+  retry,
   writePref,
 } from "./common";
 import { loadKeyboardLayout, ShortcutFieldContext, shortcutField } from "./shortcut-field";
@@ -510,7 +512,9 @@ async function start(): Promise<void> {
   // La fenêtre prend la taille de son contenu, et la suit quand il change.
   fitWindowToContent(el("root"));
 
-  config = await invoke<Config>("read_config");
+  // Sans configuration, rien ne peut s'afficher : on réessaie jusqu'à
+  // l'obtenir (un échec ponctuel ne doit pas laisser la fenêtre vide).
+  config = await retry(() => invoke<Config>("read_config"));
   renderShortcuts();
   // La disposition du clavier arrive plus tard (ou jamais) : on ne l'attend
   // pas, et on redessine les raccourcis quand elle est connue.
@@ -521,16 +525,20 @@ async function start(): Promise<void> {
       return refresh(true);
     }),
   );
-  renderPauseButton(el("pause-button"), await invoke<boolean>("is_paused"));
-  await refresh(true);
-
   bindControls();
   watchVisibility();
+  // Le rafraîchissement régulier démarre avant tout appel qui pourrait
+  // échouer : si l'un d'eux échoue, la liste se remplira quand même.
   refreshWhileVisible(() => fireAndForget(refresh()), REFRESH_INTERVAL_MS);
+  fireAndForget(refresh(true));
+  fireAndForget(
+    invoke<boolean>("is_paused").then((paused) => renderPauseButton(el("pause-button"), paused)),
+  );
   await listenToRust();
   // La mise à jour a pu être prête avant qu'on écoute l'événement.
   const pending = await invoke<string | null>("pending_update");
   if (pending) showUpdate(pending);
 }
 
+reportUncaughtErrors();
 window.addEventListener("DOMContentLoaded", handler(start));
