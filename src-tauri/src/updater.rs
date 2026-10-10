@@ -1,5 +1,8 @@
 //! La mise à jour automatique, avec le plugin officiel `tauri-plugin-updater`.
 //!
+//! Uniquement si l'option « mise à jour automatique » est cochée (options
+//! avancées, désactivée par défaut).
+//!
 //! 1. Au lancement, on demande à GitHub le fichier `latest.json` de la
 //!    dernière version publiée (adresse dans tauri.conf.json).
 //! 2. S'il annonce une version plus récente, on la télécharge en arrière-plan.
@@ -30,6 +33,17 @@ pub fn check_in_background(app: &AppHandle) {
     // `cfg!(debug_assertions)` est vrai en développement, faux dans la
     // version installée.
     if cfg!(debug_assertions) {
+        return;
+    }
+    // Option désactivée (par défaut) : on ne contacte pas internet.
+    if !crate::lock(&app.state::<crate::AppState>().config)
+        .advanced
+        .auto_update
+    {
+        return;
+    }
+    // Une mise à jour est déjà prête : inutile de la retélécharger.
+    if ready_version(app).is_some() {
         return;
     }
     let app = app.clone();

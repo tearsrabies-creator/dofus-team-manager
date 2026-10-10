@@ -92,6 +92,8 @@ export interface Config {
   advanced: {
     // Distinguer gauche et droite (Ctrl, Alt, Maj, Win) dans les raccourcis.
     distinguishSides: boolean;
+    // Chercher les nouvelles versions au lancement (désactivé par défaut).
+    autoUpdate: boolean;
   };
 }
 

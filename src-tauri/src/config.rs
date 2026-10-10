@@ -48,6 +48,10 @@ pub struct Advanced {
     /// Distinguer les touches gauche et droite (Ctrl, Maj, Alt, Win) dans les
     /// raccourcis. Utilise un crochet clavier au lieu des raccourcis Windows.
     pub distinguish_sides: bool,
+    /// Chercher et télécharger les nouvelles versions au lancement (voir
+    /// updater.rs). Désactivé par défaut : rien n'est demandé à internet
+    /// tant que l'utilisateur ne l'a pas choisi.
+    pub auto_update: bool,
 }
 
 /// Les raccourcis, écrits comme « Control+Tab » ou « Alt+Digit1 ».
@@ -183,6 +187,15 @@ mod tests {
         assert_eq!(reloaded.leader.as_deref(), Some("Joueur-2"));
 
         let _ = fs::remove_dir_all(folder);
+    }
+
+    #[test]
+    fn auto_update_off_by_default() {
+        assert!(!Config::default().advanced.auto_update);
+        // Un fichier écrit avant l'existence de l'option la laisse désactivée.
+        let config: Config =
+            serde_json::from_str(r#"{ "advanced": { "distinguishSides": true } }"#).unwrap();
+        assert!(!config.advanced.auto_update);
     }
 
     #[test]

@@ -26,7 +26,7 @@ Projet de fan, non officiel, sans lien avec Ankama.
 
 Configuration requise : Windows 10 ou 11 (64 bits). L'application s'appuie sur WebView2, déjà présent sur ces systèmes ; s'il manquait, l'installateur le télécharge.
 
-**Mises à jour** : à partir de la version 0.3.0, l'application vérifie à chaque lancement s'il existe une nouvelle version, la télécharge en arrière-plan, puis propose « Redémarrer et mettre à jour » : un clic suffit, vos réglages sont conservés. Elle n'installe jamais rien sans votre accord (l'installation ferme l'application, ce qui serait gênant en pleine partie). Pour passer d'une version plus ancienne à la 0.3.0, installez-la une fois à la main.
+**Mises à jour** : à partir de la version 0.3.0, si vous cochez « Mise à jour automatique » dans la section Avancé (désactivée par défaut), l'application vérifie à chaque lancement s'il existe une nouvelle version, la télécharge en arrière-plan, puis propose « Redémarrer et mettre à jour » : un clic suffit, vos réglages sont conservés. Elle n'installe jamais rien sans votre accord (l'installation ferme l'application, ce qui serait gênant en pleine partie). Pour passer d'une version plus ancienne à la 0.3.0, installez-la une fois à la main.
 
 **Anciennes versions** : l'installateur remplace la version déjà installée. Il désinstalle aussi automatiquement « Dofus Organizer », l'ancien nom de l'application (0.1.0), dont les réglages sont repris.
 **Désinstaller** : Paramètres Windows > Applications > Dofus Team Manager > Désinstaller.

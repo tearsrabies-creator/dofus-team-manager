@@ -41,7 +41,13 @@ pub fn save_config(
     config: Config,
 ) -> Result<Vec<String>, String> {
     config.save(&state.config_path)?;
+    let auto_update = config.advanced.auto_update;
     *crate::lock(&state.config) = config;
+    // Si la mise à jour automatique vient d'être activée, on vérifie tout de
+    // suite plutôt qu'au prochain lancement (sans effet si elle est coupée).
+    if auto_update {
+        updater::check_in_background(&app);
+    }
     Ok(shortcuts::sync(&app, true))
 }
 

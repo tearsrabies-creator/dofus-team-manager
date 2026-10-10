@@ -440,6 +440,16 @@ function bindControls(): void {
     }),
   );
 
+  const updateCheckbox = el("auto-update") as HTMLInputElement;
+  updateCheckbox.checked = config.advanced.autoUpdate;
+  updateCheckbox.addEventListener(
+    "change",
+    handler(async () => {
+      config.advanced.autoUpdate = updateCheckbox.checked;
+      await save(); // si activée, Rust cherche une nouvelle version aussitôt
+    }),
+  );
+
   const pipCheckbox = el("pip-on-minimize") as HTMLInputElement;
   pipCheckbox.checked = pipOnMinimize();
   pipCheckbox.addEventListener("change", () =>
