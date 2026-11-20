@@ -35,6 +35,20 @@ import {
   retry,
   writePref,
 } from "./common";
+import {
+  isPipPref,
+  layoutPip,
+  linesForSize,
+  linesLabel,
+  Orientation,
+  PipParts,
+  readLines,
+  readOrientation,
+  renderCharacters,
+  saveLines,
+  Size,
+  writeOrientation,
+} from "./pip-layout";
 import { loadKeyboardLayout, ShortcutFieldContext, shortcutField } from "./shortcut-field";
 
 // Toutes les combien de millisecondes on relit la liste des fenêtres
@@ -86,6 +100,7 @@ async function refresh(force = false): Promise<void> {
   config = await invoke<Config>("read_config");
   renderWindows();
   renderInvites();
+  renderPipPreview();
 }
 
 /** Construit la liste des fenêtres dans la page. */
@@ -384,6 +399,181 @@ function watchVisibility(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Onglets
+// ---------------------------------------------------------------------------
+
+type Tab = "team" | "pip";
+
+/** Affiche un onglet (et le retient pour le prochain lancement). */
+function showTab(tab: Tab): void {
+  for (const name of ["team", "pip"] as const) {
+    el(`tab-${name}`).hidden = name !== tab;
+    el(`tab-${name}-button`).setAttribute("aria-selected", String(name === tab));
+  }
+  writePref("main-tab", tab);
+  // L'aperçu ne peut se mesurer que quand son onglet est affiché.
+  renderPipPreview();
+}
+
+// ---------------------------------------------------------------------------
+// Onglet Bandeau : réglages et aperçu
+//
+// Orientation et nombre de lignes sont des préférences partagées avec le
+// bandeau (pip-layout.ts) : il les applique dès qu'elles changent ici, et
+// l'aperçu suit quand on les change sur le bandeau lui-même (événement
+// `storage`).
+// ---------------------------------------------------------------------------
+
+/** L'aperçu n'est jamais plus haut que ça (en pixels) : au-delà, il est réduit. */
+const MAX_PREVIEW_HEIGHT = 320;
+
+const previewParts: PipParts = {
+  root: el("pip-preview"),
+  characters: el("pip-preview-characters"),
+  tools: el("pip-preview-tools"),
+};
+/** La réduction appliquée à l'aperçu (1 : taille réelle). */
+let previewScale = 1;
+
+/**
+ * L'étirement en cours de l'aperçu, ou `null` : la position de départ de la
+ * souris et la taille de l'aperçu à ce moment. Pendant l'étirement, la
+ * réduction reste figée : sinon l'aperçu changerait d'échelle sous la souris.
+ */
+let resizing: { x: number; y: number; size: Size } | null = null;
+
+/** Redessine l'aperçu du bandeau et les réglages, d'après les préférences. */
+function renderPipPreview(): void {
+  if (el("tab-pip").hidden) return;
+  const orientation = readOrientation();
+  const lines = readLines(orientation);
+  const { root } = previewParts;
+
+  // Le même contenu et la même disposition que le vrai bandeau.
+  renderCharacters(previewParts.characters, windows);
+  el("pip-preview-orientation").textContent = orientation === "vertical" ? "⇆" : "⇅";
+  root.style.transform = "";
+  layoutPip(previewParts, orientation, lines);
+
+  // Trop grand pour le cadre : on le réduit (`offsetWidth` / `offsetHeight`
+  // donnent la taille réelle, sans la réduction).
+  const width = root.offsetWidth;
+  const height = root.offsetHeight;
+  const frame = el("pip-preview-frame");
+  const style = getComputedStyle(frame);
+  const room = frame.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const scale = resizing ? previewScale : Math.min(1, room / width, MAX_PREVIEW_HEIGHT / height);
+  previewScale = scale;
+  if (scale < 1) root.style.transform = `scale(${scale})`;
+  const stage = el("pip-preview-stage");
+  stage.style.width = `${width * scale}px`;
+  stage.style.height = `${height * scale}px`;
+  // Une seule poignée : le bord perpendiculaire (droit en vertical, bas en
+  // horizontal), le seul qui change quelque chose.
+  stage.classList.toggle("vertical", orientation === "vertical");
+
+  // Les réglages.
+  el("pip-horizontal").setAttribute("aria-pressed", String(orientation === "horizontal"));
+  el("pip-vertical").setAttribute("aria-pressed", String(orientation === "vertical"));
+  el("pip-lines").textContent = linesLabel(orientation, lines);
+  (el("pip-reset-size") as HTMLButtonElement).disabled =
+    readLines("horizontal") === 1 && readLines("vertical") === 1;
+}
+
+function setPipOrientation(orientation: Orientation): void {
+  writeOrientation(orientation);
+  renderPipPreview();
+}
+
+/**
+ * Étirement de l'aperçu par sa poignée. Un cadre en pointillés suit la
+ * souris ; le bandeau, lui, colle à son contenu et passe à une colonne (ou
+ * rangée) de plus dès qu'elle tient dans le cadre. Le vrai bandeau suit (il
+ * reçoit la préférence modifiée). `setPointerCapture` : la poignée continue
+ * de recevoir les mouvements même quand la souris la dépasse.
+ */
+function enablePreviewResize(handle: HTMLElement): void {
+  const ghost = el("pip-preview-ghost");
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    const root = previewParts.root;
+    resizing = {
+      x: event.clientX,
+      y: event.clientY,
+      size: { width: root.offsetWidth, height: root.offsetHeight },
+    };
+    el("pip-preview-frame").classList.add("resizing");
+  });
+
+  // Un seul calcul par image affichée, même si la souris envoie plus de
+  // mouvements (`requestAnimationFrame` : « juste avant le prochain dessin »).
+  let pending: PointerEvent | null = null;
+  const applyResize = () => {
+    if (!resizing || pending === null) return;
+    const orientation = readOrientation();
+    const vertical = orientation === "vertical";
+    const { x, y, size } = resizing;
+    // Les mouvements de la souris sont divisés par la réduction de l'aperçu :
+    // à mi-taille, 10 pixels de souris font 20 pixels de bandeau.
+    const target = {
+      width: vertical ? Math.max(0, size.width + (pending.clientX - x) / previewScale) : size.width,
+      height: vertical
+        ? size.height
+        : Math.max(0, size.height + (pending.clientY - y) / previewScale),
+    };
+    pending = null;
+    ghost.style.width = `${target.width * previewScale}px`;
+    ghost.style.height = `${target.height * previewScale}px`;
+    const lines = linesForSize(previewParts, orientation, target);
+    if (lines !== readLines(orientation)) {
+      saveLines(orientation, lines);
+      renderPipPreview();
+    }
+  };
+  handle.addEventListener("pointermove", (event) => {
+    if (!resizing) return;
+    if (pending === null) requestAnimationFrame(applyResize);
+    pending = event;
+  });
+
+  const stop = () => {
+    if (!resizing) return;
+    applyResize();
+    resizing = null;
+    el("pip-preview-frame").classList.remove("resizing");
+    // L'échelle de l'aperçu s'adapte à sa nouvelle taille.
+    renderPipPreview();
+  };
+  handle.addEventListener("pointerup", stop);
+  handle.addEventListener("pointercancel", stop);
+}
+
+/** Bouton « Tailles par défaut » : une seule ligne, dans les deux orientations. */
+function resetPipSizes(): void {
+  saveLines("horizontal", 1);
+  saveLines("vertical", 1);
+  renderPipPreview();
+}
+
+function bindPipSettings(): void {
+  el("tab-team-button").addEventListener("click", () => showTab("team"));
+  el("tab-pip-button").addEventListener("click", () => showTab("pip"));
+  el("pip-horizontal").addEventListener("click", () => setPipOrientation("horizontal"));
+  el("pip-vertical").addEventListener("click", () => setPipOrientation("vertical"));
+  for (const handle of document.querySelectorAll<HTMLElement>(".resize-handle")) {
+    enablePreviewResize(handle);
+  }
+  el("pip-reset-size").addEventListener("click", resetPipSizes);
+  // Le bandeau a été étiré, tourné... (l'événement `storage` ne vient que des
+  // autres fenêtres, jamais de nos propres écritures).
+  window.addEventListener("storage", (event) => {
+    if (isPipPref(event.key) && !resizing) renderPipPreview();
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Enregistrement et démarrage
 // ---------------------------------------------------------------------------
 
@@ -509,6 +699,8 @@ async function start(): Promise<void> {
   applyTheme();
   renderThemeButton();
   applyHelp();
+  bindPipSettings();
+  showTab(readPref("main-tab") === "pip" ? "pip" : "team");
   // La fenêtre prend la taille de son contenu, et la suit quand il change.
   fitWindowToContent(el("root"));
 

@@ -8,9 +8,11 @@ Petit gestionnaire d'équipe multicompte pour Dofus (Windows), inspiré du modul
 - **raccourcis clavier globaux**, avec n'importe quelle combinaison (Ctrl + Alt + P…) : fenêtre suivante et précédente (parmi les fenêtres cochées), un raccourci facultatif par personnage, et un **interrupteur** qui coupe ou réactive tous les autres. Ils ne sont actifs que quand une fenêtre Dofus ou l'application est au premier plan. Une option avancée permet de **distinguer gauche et droite** (Alt G / Alt D, Ctrl G / Ctrl D…) ;
 - une **couronne 👑** unique à donner au chef de groupe ;
 - bouton **« Copier les invitations »** : met dans le presse-papiers `/invite Perso2; /invite Perso3…` (toutes les fenêtres cochées sauf le chef) pour former le groupe. Sans couronne, le personnage dont la fenêtre Dofus est au premier plan la reçoit ;
-- un **bandeau** toujours au premier plan, à placer dans un coin : un clic sur un pseudo affiche sa fenêtre, la couronne (au survol) en fait le chef, 👥 copie les invitations de groupe, 🔃 range la barre des tâches, ⏸ coupe les raccourcis, ⤢ fait revenir l'application. Il peut s'ouvrir automatiquement quand on masque l'application ;
+- un **bandeau** toujours au premier plan, à placer dans un coin : un clic sur un pseudo affiche sa fenêtre, la couronne (au survol) en fait le chef, 👥 copie les invitations de groupe, 🔃 range la barre des tâches, ⏸ coupe les raccourcis, ⇅ le passe à la verticale (⇆ pour revenir), ⤢ fait revenir l'application. Il peut s'ouvrir automatiquement quand on masque l'application ;
+- un bandeau **horizontal ou vertical, sur plusieurs colonnes ou rangées** : en étirant ses bords (ou l'aperçu de l'onglet « Bandeau »), un bandeau vertical passe à deux colonnes de pseudos dès qu'elles tiennent, puis à trois…, et de même en hauteur pour un bandeau horizontal. Il colle toujours à son contenu : ses bords se recollent aux pseudos quand on relâche. Un double-clic sur sa poignée ⠿, ou le bouton « Tailles par défaut », le remet sur une seule ligne ;
 - le bouton — **cache l'application dans la zone de notification** (près de l'horloge, du volume et de la langue du clavier) : un clic sur l'icône la fait revenir, un clic droit ouvre un menu (afficher, bandeau, quitter). Windows range d'abord les nouvelles icônes dans le menu des icônes cachées (^) : faites-la glisser vers la barre des tâches pour qu'elle reste visible ;
 - une seule instance à la fois : relancer l'application réaffiche celle qui tourne déjà ;
+- une fenêtre en deux onglets : **Équipe** (fenêtres, groupe, raccourcis) et **Bandeau** (réglages du bandeau, avec un aperçu en direct) ;
 - une fenêtre sans cadre Windows qui prend juste la taille de son contenu (on la déplace en la saisissant n'importe où, hors boutons et champs), des textes d'aide qu'on peut masquer (?), un thème clair ou sombre.
 
 Ce que l'outil ne fait **pas**, volontairement : pas de connexion des comptes, pas de lecture de la mémoire du jeu, pas d'injection, pas de lecture du réseau. Il gère seulement des fenêtres Windows, comme nAiO.
@@ -27,7 +29,7 @@ Projet de fan, non officiel, sans lien avec Ankama.
 
 Configuration requise : Windows 10 ou 11 (64 bits). L'application s'appuie sur WebView2, déjà présent sur ces systèmes ; s'il manquait, l'installateur le télécharge.
 
-**Mises à jour** : à partir de la version 0.3.0, si vous cochez « Mise à jour automatique » dans la section Avancé (désactivée par défaut), l'application vérifie à chaque lancement s'il existe une nouvelle version, la télécharge en arrière-plan, puis propose « Redémarrer et mettre à jour » : un clic suffit, vos réglages sont conservés. Elle n'installe jamais rien sans votre accord (l'installation ferme l'application, ce qui serait gênant en pleine partie). Pour passer d'une version plus ancienne à la 0.3.0, installez-la une fois à la main.
+**Mises à jour** : à partir de la version 0.3.0, si vous cochez « Mise à jour automatique » dans la section Avancé de l'onglet Équipe (désactivée par défaut), l'application vérifie à chaque lancement s'il existe une nouvelle version, la télécharge en arrière-plan, puis propose « Redémarrer et mettre à jour » : un clic suffit, vos réglages sont conservés. Elle n'installe jamais rien sans votre accord (l'installation ferme l'application, ce qui serait gênant en pleine partie). Pour passer d'une version plus ancienne à la 0.3.0, installez-la une fois à la main.
 
 **Anciennes versions** : l'installateur remplace la version déjà installée. Il désinstalle aussi automatiquement « Dofus Organizer », l'ancien nom de l'application (0.1.0), dont les réglages sont repris.
 **Désinstaller** : Paramètres Windows > Applications > Dofus Team Manager > Désinstaller.
@@ -48,7 +50,7 @@ L'application tient un journal des problèmes : `%LOCALAPPDATA%\com.dofusteamman
 
 Fichier : `%APPDATA%\com.dofusteammanager.desktop\config.json` (ordre, cases cochées, chef, raccourcis). On peut le lire et le modifier à la main, application fermée. Les fichiers des premières versions (clés en français) sont toujours relus.
 
-Les préférences d'affichage (thème, aide, position du bandeau, ouverture automatique du bandeau) sont gardées à part, dans le stockage du navigateur intégré.
+Les préférences d'affichage (thème, aide, onglet affiché, position, orientation et nombre de colonnes / rangées du bandeau, ouverture automatique du bandeau) sont gardées à part, dans le stockage du navigateur intégré.
 
 Les raccourcis s'écrivent avec les noms de touches du web, séparés par `+` : des modificateurs (`Control`, `Alt`, `Shift`, `Super`, ou avec un côté : `ControlLeft`, `AltRight`, `ShiftLeft`, `MetaRight`…), puis une touche (`Tab`, `KeyP`, `Digit1`, `F2`, `ArrowRight`, `Backquote` pour la touche ²…). Exemple : `ControlLeft+Alt+KeyP`.
 
@@ -136,8 +138,9 @@ Le code (noms de fichiers, de variables, de fonctions) est en anglais ; les comm
 | `src/common.ts`                            | Ce qui sert aux deux fenêtres : types, invitations, couronne, préférences, taille automatique.                                     |
 | `src/shortcut-field.ts`                    | Les champs de saisie des raccourcis.                                                                                               |
 | `src/classes.ts`                           | Les symboles de classe (images dans `public/classes/`).                                                                            |
-| `src/main.ts`                              | La fenêtre principale : liste, glisser-déposer, invitations, raccourcis, masquage.                                                 |
-| `src/pip.ts`                               | Le bandeau : les pseudos cliquables.                                                                                               |
+| `src/main.ts`                              | La fenêtre principale : onglets, liste, glisser-déposer, invitations, raccourcis, masquage, aperçu du bandeau.                     |
+| `src/pip.ts`                               | Le bandeau : les pseudos cliquables, sa taille qui colle au contenu.                                                               |
+| `src/pip-layout.ts`                        | La disposition du bandeau (orientation, colonnes / lignes), partagée avec son aperçu dans l'onglet « Bandeau ».                    |
 | `index.html`, `pip.html`, `src/styles.css` | La structure des deux fenêtres et leur apparence.                                                                                  |
 | `src-tauri/tauri.conf.json`                | Réglages de Tauri (fenêtres, sécurité, installateur).                                                                              |
 | `src-tauri/capabilities/default.json`      | Les fonctions de Tauri que l'interface a le droit d'utiliser.                                                                      |

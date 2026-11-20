@@ -18,30 +18,39 @@
   <body>
     <!-- `data-tauri-drag-region="deep"` : on déplace le bandeau en le
          saisissant n'importe où sauf sur un bouton ; la poignée ⠿ est la
-         prise la plus visible. -->
-    <div id="root" class="pip" data-tauri-drag-region="deep">
-      <span class="grip" title="Déplacer le bandeau">⠿</span>
-      <div id="characters" class="characters"></div>
-      <button id="invite-button" class="small" type="button">👥</button>
-      <button
-        id="reorder-button"
-        class="small"
-        type="button"
-        title="Ranger les fenêtres Dofus de la barre des tâches dans l'ordre de la liste"
-        aria-label="Ranger la barre des tâches"
+         prise la plus visible. La classe horizontal / vertical est posée
+         par pip-layout.ts. -->
+    <div id="root" class="pip horizontal" data-tauri-drag-region="deep">
+      <span
+        id="grip"
+        class="grip"
+        title="Déplacer le bandeau. Étirer ses bords pour plus de colonnes ou de rangées ; double-clic : revenir à une seule"
+        >⠿</span
       >
-        🔃
-      </button>
-      <button id="pause-button" class="small" type="button">⏸</button>
-      <button
-        id="restore-button"
-        class="small"
-        type="button"
-        title="Afficher l'application"
-        aria-label="Afficher l'application"
-      >
-        ⤢
-      </button>
+      <div id="characters" class="characters pip-grid"></div>
+      <div id="tools" class="pip-tools pip-grid">
+        <button id="invite-button" class="small" type="button">👥</button>
+        <button
+          id="reorder-button"
+          class="small"
+          type="button"
+          title="Ranger les fenêtres Dofus de la barre des tâches dans l'ordre de la liste"
+          aria-label="Ranger la barre des tâches"
+        >
+          🔃
+        </button>
+        <button id="pause-button" class="small" type="button">⏸</button>
+        <button id="orientation-button" class="small" type="button">⇅</button>
+        <button
+          id="restore-button"
+          class="small"
+          type="button"
+          title="Afficher l'application"
+          aria-label="Afficher l'application"
+        >
+          ⤢
+        </button>
+      </div>
     </div>
   </body>
 </html>

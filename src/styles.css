@@ -50,8 +50,8 @@
   visibility: hidden;
 }
 
-/* La fenêtre prend la taille du contenu (voir fitWindowToContent) :
-   jamais de barre de défilement. */
+/* Les fenêtres prennent la taille de leur contenu (fitWindowToContent, ou
+   fitToContent pour le bandeau) : jamais de barre de défilement. */
 html,
 body {
   margin: 0;
@@ -391,6 +391,169 @@ input.shortcut:focus {
   margin-top: 6px;
 }
 
+/* --- Onglets --- */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+button.tab {
+  margin-bottom: -1px; /* l'onglet actif recouvre la ligne du dessous */
+  padding: 4px 14px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+}
+
+button.tab:hover {
+  color: var(--text);
+}
+
+button.tab[aria-selected="true"] {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--border);
+  border-bottom-color: var(--bg);
+  font-weight: 600;
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* `hidden` doit l'emporter sur le `display: flex` ci-dessus. */
+.tab-panel[hidden] {
+  display: none;
+}
+
+/* --- Onglet Bandeau --- */
+
+/* Le cadre de l'aperçu : il ne fait pas élargir la fenêtre (même astuce que
+   pour l'aide) ; un aperçu trop grand y est réduit (voir main.ts). */
+.pip-preview-frame {
+  width: 0;
+  min-width: 100%;
+  display: flex;
+  overflow: hidden;
+  padding: 12px 16px 16px 12px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+/* La place occupée par l'aperçu une fois réduit ; l'aperçu lui-même est
+   posé dessus à sa taille réelle, puis réduit par `transform`. */
+.pip-preview-stage {
+  position: relative;
+}
+
+.pip-preview-stage > .pip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+/* La poignée pour étirer l'aperçu : son bord droit en vertical, son bord du
+   bas en horizontal, un peu débordante pour être facile à attraper. */
+.resize-handle {
+  position: absolute;
+  z-index: 1;
+  touch-action: none;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.resize-handle:hover,
+.resizing .resize-handle {
+  background: var(--accent);
+}
+
+.resize-handle.e {
+  top: 0;
+  right: -9px;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.resize-handle.s {
+  left: 0;
+  bottom: -9px;
+  width: 100%;
+  height: 6px;
+  cursor: ns-resize;
+}
+
+.pip-preview-stage:not(.vertical) .resize-handle.e,
+.pip-preview-stage.vertical .resize-handle.s {
+  display: none;
+}
+
+/* Le cadre en pointillés qui suit la souris pendant l'étirement. */
+.resize-ghost {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 1px dashed var(--accent);
+  pointer-events: none;
+}
+
+.resizing .resize-ghost {
+  display: block;
+}
+
+/* Dans l'aperçu (jamais survolé : il est inerte), les couronnes sont
+   montrées grisées, celle du chef en couleur. */
+.pip-preview-stage button.crown {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.pip-preview-stage button.crown[aria-pressed="true"] {
+  opacity: 1;
+  filter: none;
+}
+
+.pip-settings {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+/* Deux boutons collés : un seul enfoncé à la fois. */
+.segmented {
+  display: flex;
+}
+
+.segmented button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.segmented button:last-child {
+  margin-left: -1px;
+  border-radius: 0 6px 6px 0;
+}
+
+.segmented button[aria-pressed="true"] {
+  position: relative; /* sa bordure passe au-dessus de celle du voisin */
+  background: var(--active);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
 /* Bandeau « nouvelle version prête » (fenêtre principale). */
 .update-banner {
   display: flex;
@@ -410,8 +573,11 @@ input.shortcut:focus {
 
 /* ============================ Bandeau ============================ */
 
+/* Deux orientations : horizontal (poignée, pseudos et boutons côte à côte)
+   ou vertical (empilés). La fenêtre prend toujours la taille du contenu ;
+   pip-layout.ts répartit les pseudos sur le nombre de colonnes / rangées
+   choisi. */
 .pip {
-  width: max-content;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -419,16 +585,45 @@ input.shortcut:focus {
   font-size: 12px;
   border: 1px solid var(--border);
   background: var(--bg);
+  width: max-content;
+  height: max-content;
+}
+
+.pip.vertical {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .pip .grip {
   padding: 0 4px;
   cursor: move;
+  text-align: center;
 }
 
-.characters {
-  display: flex;
+/* Les grilles des pseudos et des boutons : le nombre de colonnes / lignes
+   est calculé par pip-layout.ts (layoutPip). */
+.pip-grid {
+  display: grid;
   gap: 4px;
+}
+
+.pip.vertical .pip-tools {
+  justify-content: center;
+}
+
+.pip.horizontal .pip-tools {
+  align-content: center;
+}
+
+/* Pendant la mesure (le temps d'un calcul, jamais affiché) : les éléments à
+   leur taille naturelle, sur une seule ligne. */
+.pip-grid.measuring {
+  display: flex;
+  width: max-content;
+}
+
+.pip-grid.measuring > * {
+  flex: none;
 }
 
 /* Un personnage du bandeau : un encadré qui contient le bouton du pseudo et
@@ -466,6 +661,12 @@ button.character-name {
   background: transparent;
   color: inherit;
   white-space: nowrap;
+}
+
+/* En vertical, les encadrés s'étirent à la largeur de leur colonne : le
+   pseudo prend la place, la couronne reste à droite. */
+.pip.vertical button.character-name {
+  flex: 1;
 }
 
 button.character-name .class-badge {

@@ -78,98 +78,186 @@
         <button id="update-button" type="button">Redémarrer et mettre à jour</button>
       </div>
 
-      <section>
-        <h2>Fenêtres de jeu</h2>
-        <p class="help">
-          Cochez les fenêtres entre lesquelles naviguer avec « fenêtre suivante / précédente ».
-          Glissez une ligne par sa poignée ⠿ pour changer l'ordre. La couronne désigne le chef de
-          groupe : survolez une ligne et cliquez sur sa couronne pour la lui donner. Le champ de
-          droite donne un raccourci propre au personnage (facultatif, marche même s'il est décoché).
-          « Ranger la barre des tâches » remet les fenêtres Dofus de la barre des tâches dans
-          l'ordre de la liste.
-        </p>
-        <ul id="window-list" class="window-list"></ul>
-        <div class="list-actions">
-          <button
-            id="reorder-taskbar"
-            class="small"
-            type="button"
-            title="Ranger les fenêtres Dofus de la barre des tâches dans l'ordre de cette liste"
-          >
-            Ranger la barre des tâches
-          </button>
-          <span id="reorder-confirmation" class="confirmation" aria-live="polite"></span>
-        </div>
-      </section>
+      <!-- Les onglets : « Équipe » (le réglage de tous les jours) et
+           « Bandeau » (le mode minimisé). Voir showTab dans main.ts. -->
+      <nav class="tabs" role="tablist" aria-label="Onglets">
+        <button id="tab-team-button" class="tab" type="button" role="tab" aria-controls="tab-team">
+          Équipe
+        </button>
+        <button id="tab-pip-button" class="tab" type="button" role="tab" aria-controls="tab-pip">
+          Bandeau
+        </button>
+      </nav>
 
-      <section>
-        <h2>Groupe</h2>
-        <p class="help">
-          La commande invite les fenêtres cochées, sauf le chef (couronne). Collez-la dans le chat
-          du chef.
-        </p>
-        <div class="invites">
-          <button id="copy-invites" type="button">Copier les invitations</button>
-          <span id="copy-confirmation" class="confirmation" aria-live="polite"></span>
-        </div>
-        <code id="invite-preview" class="preview"></code>
-      </section>
+      <div id="tab-team" class="tab-panel" role="tabpanel" aria-labelledby="tab-team-button">
+        <section>
+          <h2>Fenêtres de jeu</h2>
+          <p class="help">
+            Cochez les fenêtres entre lesquelles naviguer avec « fenêtre suivante / précédente ».
+            Glissez une ligne par sa poignée ⠿ pour changer l'ordre. La couronne désigne le chef de
+            groupe : survolez une ligne et cliquez sur sa couronne pour la lui donner. Le champ de
+            droite donne un raccourci propre au personnage (facultatif, marche même s'il est
+            décoché). « Ranger la barre des tâches » remet les fenêtres Dofus de la barre des tâches
+            dans l'ordre de la liste.
+          </p>
+          <ul id="window-list" class="window-list"></ul>
+          <div class="list-actions">
+            <button
+              id="reorder-taskbar"
+              class="small"
+              type="button"
+              title="Ranger les fenêtres Dofus de la barre des tâches dans l'ordre de cette liste"
+            >
+              Ranger la barre des tâches
+            </button>
+            <span id="reorder-confirmation" class="confirmation" aria-live="polite"></span>
+          </div>
+        </section>
 
-      <section>
-        <h2>Raccourcis</h2>
-        <p class="help">
-          Ils ne marchent que quand une fenêtre Dofus ou l'application est au premier plan :
-          ailleurs, les touches gardent leur effet normal. Pour en définir un, ici ou dans la liste
-          : cliquez dans le champ puis appuyez sur la combinaison voulue (Échap pour annuler).
-          L'interrupteur (ou le bouton ⏸) coupe tous les autres raccourcis jusqu'à ce qu'on le
-          presse à nouveau.
-        </p>
-        <div id="shortcuts" class="shortcuts"></div>
-        <ul id="errors" class="errors" aria-live="polite"></ul>
-      </section>
+        <section>
+          <h2>Groupe</h2>
+          <p class="help">
+            La commande invite les fenêtres cochées, sauf le chef (couronne). Collez-la dans le chat
+            du chef.
+          </p>
+          <div class="invites">
+            <button id="copy-invites" type="button">Copier les invitations</button>
+            <span id="copy-confirmation" class="confirmation" aria-live="polite"></span>
+          </div>
+          <code id="invite-preview" class="preview"></code>
+        </section>
 
-      <section>
-        <h2>Bandeau</h2>
-        <p class="help">
-          Un petit bandeau toujours visible, à placer dans un coin de l'écran : un clic sur un
-          pseudo affiche sa fenêtre, ⤢ fait revenir l'application. On le déplace en le saisissant
-          (par exemple par ⠿).
-        </p>
-        <p class="help">
-          Le bouton — cache l'application : son icône reste dans la zone de notification, près de
-          l'horloge (clic pour la faire revenir, clic droit pour le menu). Si Windows la range dans
-          les icônes cachées (^), faites-la glisser vers la barre des tâches pour qu'elle reste
-          visible.
-        </p>
-        <label class="option">
-          <input id="pip-on-minimize" type="checkbox" />
-          Afficher le bandeau quand l'application est masquée
-        </label>
-      </section>
+        <section>
+          <h2>Raccourcis</h2>
+          <p class="help">
+            Ils ne marchent que quand une fenêtre Dofus ou l'application est au premier plan :
+            ailleurs, les touches gardent leur effet normal. Pour en définir un, ici ou dans la
+            liste : cliquez dans le champ puis appuyez sur la combinaison voulue (Échap pour
+            annuler). L'interrupteur (ou le bouton ⏸) coupe tous les autres raccourcis jusqu'à ce
+            qu'on le presse à nouveau.
+          </p>
+          <div id="shortcuts" class="shortcuts"></div>
+          <ul id="errors" class="errors" aria-live="polite"></ul>
+        </section>
 
-      <!-- `<details>` : une section repliable, ouverte d'un clic sur son titre. -->
-      <details class="advanced">
-        <summary>Avancé</summary>
-        <label class="option">
-          <input id="distinguish-sides" type="checkbox" />
-          Distinguer les touches gauche et droite (Ctrl, Alt, Maj, Win)
-        </label>
-        <p class="help">
-          Permet par exemple d'avoir un raccourci sur Alt gauche + P et un autre sur Alt droit + P.
-          Les raccourcis Windows ne savent pas faire cette différence : l'application écoute alors
-          elle-même le clavier, et seulement quand une fenêtre Dofus ou l'application est au premier
-          plan. Une fois l'option cochée, saisissez à nouveau les raccourcis concernés.
-        </p>
-        <label class="option">
-          <input id="auto-update" type="checkbox" />
-          Mise à jour automatique
-        </label>
-        <p class="help">
-          Au lancement, l'application cherche une nouvelle version sur GitHub et la télécharge en
-          arrière-plan, puis propose de redémarrer pour l'installer. Rien n'est installé sans votre
-          accord. Désactivée par défaut : l'application ne contacte alors pas internet.
-        </p>
-      </details>
+        <!-- `<details>` : une section repliable, ouverte d'un clic sur son titre. -->
+        <details class="advanced">
+          <summary>Avancé</summary>
+          <label class="option">
+            <input id="distinguish-sides" type="checkbox" />
+            Distinguer les touches gauche et droite (Ctrl, Alt, Maj, Win)
+          </label>
+          <p class="help">
+            Permet par exemple d'avoir un raccourci sur Alt gauche + P et un autre sur Alt droit +
+            P. Les raccourcis Windows ne savent pas faire cette différence : l'application écoute
+            alors elle-même le clavier, et seulement quand une fenêtre Dofus ou l'application est au
+            premier plan. Une fois l'option cochée, saisissez à nouveau les raccourcis concernés.
+          </p>
+          <label class="option">
+            <input id="auto-update" type="checkbox" />
+            Mise à jour automatique
+          </label>
+          <p class="help">
+            Au lancement, l'application cherche une nouvelle version sur GitHub et la télécharge en
+            arrière-plan, puis propose de redémarrer pour l'installer. Rien n'est installé sans
+            votre accord. Désactivée par défaut : l'application ne contacte alors pas internet.
+          </p>
+        </details>
+      </div>
+
+      <!-- Onglet « Bandeau » : les réglages du bandeau, avec un aperçu dessiné
+           par le même code que le vrai (pip-layout.ts). -->
+      <div id="tab-pip" class="tab-panel" role="tabpanel" aria-labelledby="tab-pip-button" hidden>
+        <section>
+          <h2>Aperçu</h2>
+          <p class="help">
+            Le bandeau tel qu'il s'affiche, avec vos personnages connectés (réduit s'il est trop
+            grand pour cette fenêtre). Étirez-le par la poignée de son bord (à droite en vertical,
+            en bas en horizontal) pour ajouter ou retirer des colonnes ou des rangées : le vrai
+            bandeau suit en direct.
+          </p>
+          <!-- `data-tauri-drag-region="false"` : ici, tirer à la souris étire
+               l'aperçu au lieu de déplacer la fenêtre. `inert` : l'aperçu
+               n'est qu'une image, ses boutons ne font rien. -->
+          <div id="pip-preview-frame" class="pip-preview-frame" data-tauri-drag-region="false">
+            <div id="pip-preview-stage" class="pip-preview-stage">
+              <!-- Le cadre en pointillés qui suit la souris pendant l'étirement. -->
+              <span id="pip-preview-ghost" class="resize-ghost"></span>
+              <span
+                class="resize-handle e"
+                title="Élargir pour plus de colonnes, rétrécir pour moins"
+              ></span>
+              <span
+                class="resize-handle s"
+                title="Agrandir pour plus de rangées, réduire pour moins"
+              ></span>
+              <div id="pip-preview" class="pip horizontal" inert>
+                <span class="grip">⠿</span>
+                <div id="pip-preview-characters" class="characters pip-grid"></div>
+                <div id="pip-preview-tools" class="pip-tools pip-grid">
+                  <button class="small" type="button">👥</button>
+                  <button class="small" type="button">🔃</button>
+                  <button class="small" type="button">⏸</button>
+                  <button id="pip-preview-orientation" class="small" type="button">⇅</button>
+                  <button class="small" type="button">⤢</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Disposition</h2>
+          <p class="help">
+            En vertical, élargissez le bandeau pour répartir les pseudos sur plusieurs colonnes ; en
+            horizontal, agrandissez sa hauteur pour plusieurs rangées. Cela se fait en étirant
+            l'aperçu ci-dessus ou directement les bords du bandeau, qui se recollent ensuite à son
+            contenu. Chaque orientation garde son propre réglage. Sur le bandeau, le bouton ⇅ (ou ⇆)
+            change aussi l'orientation, et un double-clic sur la poignée ⠿ le remet sur une seule
+            ligne.
+          </p>
+          <div class="pip-settings">
+            <span>Orientation</span>
+            <div class="segmented" role="group" aria-label="Orientation du bandeau">
+              <button id="pip-horizontal" class="small" type="button">Horizontale</button>
+              <button id="pip-vertical" class="small" type="button">Verticale</button>
+            </div>
+            <span>Répartition</span>
+            <span id="pip-lines" class="muted"></span>
+          </div>
+          <div class="list-actions">
+            <button
+              id="pip-reset-size"
+              class="small"
+              type="button"
+              title="Revenir à une seule rangée (horizontal) et une seule colonne (vertical)"
+            >
+              Tailles par défaut
+            </button>
+          </div>
+        </section>
+
+        <section>
+          <h2>Affichage</h2>
+          <p class="help">
+            Un petit bandeau toujours visible, à placer dans un coin de l'écran : un clic sur un
+            pseudo affiche sa fenêtre, la couronne (au survol) en fait le chef, 👥 copie les
+            invitations, 🔃 range la barre des tâches, ⏸ coupe les raccourcis et ⤢ fait revenir
+            l'application. On le déplace en le saisissant (par exemple par ⠿). Le bouton ▭ en haut
+            l'affiche ou le cache.
+          </p>
+          <p class="help">
+            Le bouton — cache l'application : son icône reste dans la zone de notification, près de
+            l'horloge (clic pour la faire revenir, clic droit pour le menu). Si Windows la range
+            dans les icônes cachées (^), faites-la glisser vers la barre des tâches pour qu'elle
+            reste visible.
+          </p>
+          <label class="option">
+            <input id="pip-on-minimize" type="checkbox" />
+            Afficher le bandeau quand l'application est masquée
+          </label>
+        </section>
+      </div>
     </main>
   </body>
 </html>

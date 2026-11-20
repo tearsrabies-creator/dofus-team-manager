@@ -324,7 +324,7 @@ export function fitWindowToContent(root: HTMLElement, keepOnScreen = false): voi
  * connecte), on la décale pour qu'elle reste entièrement visible.
  * Tout est en pixels physiques ici.
  */
-async function moveBackOnScreen() {
+export async function moveBackOnScreen() {
   const appWindow = getCurrentWindow();
   const monitor = await currentMonitor();
   if (!monitor) return;
