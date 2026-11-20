@@ -73,6 +73,7 @@ Les mêmes vérifications tournent automatiquement sur GitHub à chaque envoi (`
 
 ```sh
 npm run check                 # TypeScript : types, ESLint, mise en forme (Prettier)
+npm test                      # TypeScript : tests automatiques (Vitest)
 npm run format                # remet en forme tout le code de l'interface
 cd src-tauri
 cargo fmt                     # remet en forme le code Rust

@@ -455,10 +455,12 @@ function renderPipPreview(): void {
   root.style.transform = "";
   layoutPip(previewParts, orientation, lines);
 
-  // Trop grand pour le cadre : on le réduit (`offsetWidth` / `offsetHeight`
-  // donnent la taille réelle, sans la réduction).
-  const width = root.offsetWidth;
-  const height = root.offsetHeight;
+  // Trop grand pour le cadre : on le réduit. La taille est mesurée avant
+  // la réduction (transform remis à zéro ci-dessus), arrondie au-dessus :
+  // `offsetWidth` arrondirait au plus proche, et pourrait couper un bord.
+  const measured = root.getBoundingClientRect();
+  const width = Math.ceil(measured.width);
+  const height = Math.ceil(measured.height);
   const frame = el("pip-preview-frame");
   const style = getComputedStyle(frame);
   const room = frame.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);

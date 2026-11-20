@@ -3,8 +3,9 @@
 // avec `import { ... } from "./common"`.
 
 import { invoke } from "@tauri-apps/api/core";
-import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { currentMonitor, getCurrentWindow, Window } from "@tauri-apps/api/window";
+import { resizeWindow, Size, toCss, toPhysical } from "./sizing";
 
 // ---------------------------------------------------------------------------
 // Tâches asynchrones
@@ -300,19 +301,40 @@ export function refreshWhileVisible(refresh: () => void, intervalMs: number) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Donne à la fenêtre une zone d'affichage de `css` pixels CSS (la taille
+ * d'un élément, mesurée par le navigateur), et renvoie la taille obtenue,
+ * en pixels CSS elle aussi.
+ *
+ * On passe par les pixels physiques avec `devicePixelRatio`, arrondis
+ * au-dessus : la fenêtre n'est jamais d'un pixel trop petite, quel que soit
+ * le zoom de l'écran. Et si Windows donne une autre taille que celle demandée
+ * (bordures invisibles des fenêtres sans cadre, voir sizing.ts), l'écart est
+ * corrigé : sinon le bout du contenu serait coupé.
+ */
+export async function setContentSize(css: Size): Promise<Size> {
+  const appWindow = getCurrentWindow();
+  const ratio = window.devicePixelRatio || 1;
+  const obtained = await resizeWindow(
+    {
+      setInnerSize: (size) => appWindow.setSize(new PhysicalSize(size.width, size.height)),
+      innerSize: () => appWindow.innerSize(),
+    },
+    toPhysical(css, ratio),
+  );
+  return toCss(obtained, ratio);
+}
+
+/**
  * Donne à la fenêtre exactement la taille de `root`, et la réajuste à
  * chaque fois que le contenu change (une ligne de plus, l'aide masquée...).
  *
  * `ResizeObserver` est un « observateur » fourni par le navigateur : il
  * appelle notre fonction dès que la taille de l'élément observé change.
- * Les tailles CSS sont en pixels « logiques », indépendants du zoom de
- * Windows : d'où `LogicalSize`.
  */
 export function fitWindowToContent(root: HTMLElement, keepOnScreen = false): void {
-  const appWindow = getCurrentWindow();
   const fit = async () => {
     const { width, height } = root.getBoundingClientRect();
-    await appWindow.setSize(new LogicalSize(Math.ceil(width), Math.ceil(height)));
+    await setContentSize({ width, height });
     if (keepOnScreen) await moveBackOnScreen();
   };
   new ResizeObserver(handler(fit)).observe(root);

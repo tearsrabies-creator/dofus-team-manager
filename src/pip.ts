@@ -19,6 +19,7 @@ import {
   renderPauseButton,
   reportUncaughtErrors,
   restoreMain,
+  setContentSize,
 } from "./common";
 import {
   isPipPref,
@@ -30,9 +31,9 @@ import {
   readOrientation,
   renderCharacters,
   saveLines,
-  Size,
   writeOrientation,
 } from "./pip-layout";
+import { matchesAny, Size } from "./sizing";
 
 // Le bandeau relit la liste un peu plus souvent que la fenêtre principale,
 // pour que la fenêtre active soit vite à jour (seulement quand il est visible).
@@ -145,35 +146,62 @@ function layout(): void {
 }
 
 /**
- * Les tailles que nous avons nous-mêmes demandées à la fenêtre ces dernières
- * secondes : un changement de taille qui n'en fait pas partie vient de
- * l'utilisateur (il étire un bord).
+ * Les tailles que nous avons nous-mêmes données à la fenêtre ces dernières
+ * secondes (demandées et obtenues) : un changement de taille qui n'en fait
+ * pas partie vient de l'utilisateur (il étire un bord).
  */
-const requestedSizes: (Size & { at: number })[] = [];
+const ownSizes: (Size & { at: number })[] = [];
+
+/**
+ * Combien de temps, après un redimensionnement de notre part, les
+ * changements de taille sont considérés comme les nôtres : le navigateur
+ * les annonce un peu après, et Windows ne donne pas toujours la taille
+ * exacte demandée (voir sizing.ts). Sans cela, une taille un peu différente
+ * passerait pour un étirement par l'utilisateur, et pourrait lui retirer
+ * une colonne.
+ */
+const OWN_RESIZE_GRACE_MS = 500;
+
+/** Redimensionnements de notre part en cours, et la fin du dernier. */
+let ownResizes = 0;
+let ownResizeEnd = 0;
 
 /** Vrai pendant que l'utilisateur étire le bandeau : on ne le recolle pas. */
 let userResizing = false;
 let settleTimer: number | undefined;
 
+function rememberOwnSize(size: Size): void {
+  const now = Date.now();
+  ownSizes.push({ ...size, at: now });
+  while (ownSizes.length > 0 && now - ownSizes[0].at > 2000) ownSizes.shift();
+}
+
+/** Vrai si un changement de taille vers `size` vient de nous. */
+function isOwnResize(size: Size): boolean {
+  return (
+    ownResizes > 0 || Date.now() - ownResizeEnd < OWN_RESIZE_GRACE_MS || matchesAny(size, ownSizes)
+  );
+}
+
 /** La fenêtre prend la taille du contenu, et reste entièrement sur son écran. */
 async function fitToContent(): Promise<void> {
   if (userResizing) return;
   const { width, height } = parts.root.getBoundingClientRect();
-  const size = { width: Math.ceil(width), height: Math.ceil(height) };
-  const now = Date.now();
-  requestedSizes.push({ ...size, at: now });
-  while (requestedSizes.length > 0 && now - requestedSizes[0].at > 2000) requestedSizes.shift();
-  await getCurrentWindow().setSize(new LogicalSize(size.width, size.height));
+  rememberOwnSize({ width: Math.ceil(width), height: Math.ceil(height) });
+  ownResizes++;
+  try {
+    rememberOwnSize(await setContentSize({ width, height }));
+  } finally {
+    ownResizes--;
+    ownResizeEnd = Date.now();
+  }
   await moveBackOnScreen();
 }
 
 /** La fenêtre a changé de taille : à notre demande, ou par l'utilisateur. */
 function onWindowResized(): void {
   const size = { width: window.innerWidth, height: window.innerHeight };
-  const ours = requestedSizes.some(
-    (r) => Math.abs(r.width - size.width) <= 2 && Math.abs(r.height - size.height) <= 2,
-  );
-  if (ours && !userResizing) return;
+  if (!userResizing && isOwnResize(size)) return;
   // L'utilisateur étire un bord : nombre de lignes selon la place (retenu
   // tout de suite, pour que l'aperçu de la fenêtre principale suive).
   userResizing = true;

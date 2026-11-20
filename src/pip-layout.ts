@@ -17,15 +17,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { classBadge } from "./classes";
 import { crownButton, fireAndForget, GameWindow, readPref, writePref } from "./common";
+import { clampLines, extentOf, linesIn, Size } from "./sizing";
 
+export type { Size };
 export type Orientation = "horizontal" | "vertical";
-export type Size = { width: number; height: number };
 
 /** Les éléments d'un bandeau (le vrai, ou son aperçu). */
 export type PipParts = { root: HTMLElement; characters: HTMLElement; tools: HTMLElement };
-
-/** L'écart entre deux éléments d'une grille (le `gap` de .pip-grid). */
-const GAP = 4;
 
 // ---------------------------------------------------------------------------
 // Préférences
@@ -118,16 +116,6 @@ function itemSize(grid: HTMLElement, vertical: boolean): number {
   return size;
 }
 
-/** Combien de lignes d'éléments de taille `item` tiennent dans `room` pixels. */
-function linesIn(room: number, item: number): number {
-  return Math.floor((room + GAP) / (item + GAP));
-}
-
-/** Borne `lines` entre 1 et le nombre d'éléments de la grille. */
-function clampLines(grid: HTMLElement, lines: number): number {
-  return Math.min(Math.max(grid.children.length, 1), Math.max(1, lines));
-}
-
 /**
  * Place les éléments d'une grille sur `lines` lignes (des colonnes en
  * vertical, des rangées en horizontal).
@@ -161,12 +149,13 @@ export function layoutPip(parts: PipParts, orientation: Orientation, lines: numb
   root.classList.toggle("vertical", vertical);
   root.classList.toggle("horizontal", !vertical);
 
-  const characterLines = clampLines(characters, lines);
+  const characterLines = clampLines(characters.children.length, lines);
   place(characters, vertical, characterLines, true);
   // L'étendue des pseudos dans le sens perpendiculaire : leurs lignes et les
   // écarts entre elles.
-  const extent = characterLines * itemSize(characters, vertical) + (characterLines - 1) * GAP;
-  place(tools, vertical, clampLines(tools, linesIn(extent, itemSize(tools, vertical))), false);
+  const extent = extentOf(characterLines, itemSize(characters, vertical));
+  const toolLines = linesIn(extent, itemSize(tools, vertical));
+  place(tools, vertical, clampLines(tools.children.length, toolLines), false);
 }
 
 /**
@@ -189,7 +178,8 @@ export function linesForSize(parts: PipParts, orientation: Orientation, size: Si
       px("padding-bottom") -
       px("border-top-width") -
       px("border-bottom-width");
-  return clampLines(parts.characters, linesIn(room, itemSize(parts.characters, vertical)));
+  const item = itemSize(parts.characters, vertical);
+  return clampLines(parts.characters.children.length, linesIn(room, item));
 }
 
 /** « 2 colonnes », « 1 rangée »... */

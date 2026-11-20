@@ -22,6 +22,8 @@ jobs:
 
       - name: TypeScript — types, ESLint, Prettier
         run: npm run check
+      - name: TypeScript — tests
+        run: npm test
       # La partie Rust a besoin de l'interface compilée (dossier `dist`).
       - name: Interface — compilation
         run: npm run build
