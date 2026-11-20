@@ -109,3 +109,53 @@ export function clampLines(count: number, lines: number): number {
 export function extentOf(lines: number, item: number): number {
   return lines * item + (lines - 1) * GAP;
 }
+
+// ---------------------------------------------------------------------------
+// Rester sur l'écran
+// ---------------------------------------------------------------------------
+
+/** Un rectangle : sa position (coin en haut à gauche) et sa taille. */
+export type Rect = { x: number; y: number } & Size;
+
+/**
+ * La taille à donner à une fenêtre qui colle à son contenu (`content`),
+ * sans dépasser la place disponible (`room`, la zone utile de l'écran, sans
+ * la barre des tâches). Sur un petit écran, ou avec un fort zoom, le contenu
+ * peut ne pas tenir : la fenêtre prend alors toute la place, et son contenu
+ * défile (`scroll`). La barre de défilement (`scrollbar` pixels de large)
+ * s'ajoute à la largeur, pour ne rien cacher sur le côté.
+ */
+export function fitWithin(
+  content: Size,
+  room: Size,
+  scrollbar: number,
+): { size: Size; scroll: boolean } {
+  const scroll = content.height > room.height || content.width > room.width;
+  if (!scroll) return { size: content, scroll };
+  return {
+    size: {
+      width: Math.min(
+        room.width,
+        content.height > room.height ? content.width + scrollbar : content.width,
+      ),
+      height: Math.min(
+        room.height,
+        content.width > room.width ? content.height + scrollbar : content.height,
+      ),
+    },
+    scroll,
+  };
+}
+
+/**
+ * La position qui garde la fenêtre `window` entièrement dans `area` : on la
+ * recule si elle dépasse à droite ou en bas, sans passer avant le bord
+ * gauche ou le haut (une fenêtre plus grande que la zone reste calée en haut
+ * à gauche, là où sont ses boutons).
+ */
+export function keepInside(window: Rect, area: Rect): { x: number; y: number } {
+  return {
+    x: Math.max(area.x, Math.min(window.x, area.x + area.width - window.width)),
+    y: Math.max(area.y, Math.min(window.y, area.y + area.height - window.height)),
+  };
+}

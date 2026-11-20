@@ -59,6 +59,13 @@ body {
   background: var(--bg);
 }
 
+/* Sauf quand le contenu ne tient pas sur l'écran (petit écran, fort zoom) :
+   la fenêtre prend toute la place disponible et son contenu défile
+   (fitWindowToContent). */
+html.scrolling {
+  overflow: auto;
+}
+
 button,
 input {
   font: inherit;

@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 import {
   clampLines,
   extentOf,
+  fitWithin,
+  keepInside,
   linesIn,
   matchesAny,
   nextRequest,
@@ -184,5 +186,69 @@ describe("clampLines", () => {
     expect(clampLines(3, 0)).toBe(1);
     expect(clampLines(0, 2)).toBe(1);
     expect(clampLines(4, 2)).toBe(2);
+  });
+});
+
+describe("fitWithin", () => {
+  // Un portable 1366 × 768 avec un zoom Windows à 125 % : 1093 × 583
+  // pixels utiles une fois la barre des tâches retirée.
+  const smallScreen = { width: 1093, height: 583 };
+
+  it("colle au contenu quand il tient sur l'écran", () => {
+    const content = { width: 420, height: 500 };
+    expect(fitWithin(content, smallScreen, 17)).toEqual({ size: content, scroll: false });
+  });
+
+  it("fenêtre principale trop haute : toute la hauteur disponible, et défilement", () => {
+    // Le cas signalé : la fenêtre (non redimensionnable) dépassait en bas.
+    const { size, scroll } = fitWithin({ width: 420, height: 760 }, smallScreen, 17);
+    expect(scroll).toBe(true);
+    expect(size.height).toBe(583);
+    // La barre de défilement s'ajoute : rien n'est caché sur le côté.
+    expect(size.width).toBe(437);
+  });
+
+  it("ne dépasse jamais l'écran, même dans les deux sens", () => {
+    const { size, scroll } = fitWithin({ width: 2000, height: 2000 }, smallScreen, 17);
+    expect(scroll).toBe(true);
+    expect(size).toEqual(smallScreen);
+  });
+});
+
+describe("keepInside", () => {
+  // La zone utile d'un écran 1920 × 1080 avec la barre des tâches en bas.
+  const area = { x: 0, y: 0, width: 1920, height: 1032 };
+
+  it("ne bouge pas une fenêtre entièrement visible", () => {
+    expect(keepInside({ x: 100, y: 100, width: 400, height: 500 }, area)).toEqual({
+      x: 100,
+      y: 100,
+    });
+  });
+
+  it("remonte une fenêtre qui passe sous la barre des tâches", () => {
+    expect(keepInside({ x: 100, y: 700, width: 400, height: 500 }, area)).toEqual({
+      x: 100,
+      y: 532,
+    });
+  });
+
+  it("recule une fenêtre qui dépasse à droite", () => {
+    expect(keepInside({ x: 1800, y: 16, width: 400, height: 40 }, area)).toEqual({
+      x: 1520,
+      y: 16,
+    });
+  });
+
+  it("cale en haut à gauche une fenêtre plus grande que la zone", () => {
+    expect(keepInside({ x: 50, y: 50, width: 2000, height: 1100 }, area)).toEqual({ x: 0, y: 0 });
+  });
+
+  it("tient compte d'un deuxième écran et d'une barre des tâches à gauche", () => {
+    const second = { x: 1920 + 48, y: 0, width: 1920 - 48, height: 1080 };
+    expect(keepInside({ x: 1930, y: 10, width: 400, height: 500 }, second)).toEqual({
+      x: 1968,
+      y: 10,
+    });
   });
 });

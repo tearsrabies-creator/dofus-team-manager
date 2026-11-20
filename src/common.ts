@@ -5,7 +5,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { currentMonitor, getCurrentWindow, Window } from "@tauri-apps/api/window";
-import { resizeWindow, Size, toCss, toPhysical } from "./sizing";
+import { fitWithin, keepInside, resizeWindow, Size, toCss, toPhysical } from "./sizing";
 
 // ---------------------------------------------------------------------------
 // Tâches asynchrones
@@ -325,25 +325,60 @@ export async function setContentSize(css: Size): Promise<Size> {
 }
 
 /**
- * Donne à la fenêtre exactement la taille de `root`, et la réajuste à
- * chaque fois que le contenu change (une ligne de plus, l'aide masquée...).
+ * La place disponible pour une fenêtre, en pixels CSS : la zone utile de
+ * son écran (sans la barre des tâches). `null` si l'écran est inconnu.
+ */
+async function roomOnScreen(): Promise<Size | null> {
+  const monitor = await currentMonitor();
+  if (!monitor) return null;
+  return toCss(monitor.workArea.size, window.devicePixelRatio || 1);
+}
+
+/** La largeur d'une barre de défilement, en pixels CSS (mesurée une fois). */
+let scrollbarWidth: number | undefined;
+
+function measureScrollbar(): number {
+  if (scrollbarWidth === undefined) {
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:absolute;visibility:hidden;width:100px;overflow:scroll";
+    document.body.append(probe);
+    scrollbarWidth = probe.offsetWidth - probe.clientWidth;
+    probe.remove();
+  }
+  return scrollbarWidth;
+}
+
+/**
+ * Donne à la fenêtre la taille de `root`, et la réajuste à chaque fois que
+ * le contenu change (une ligne de plus, l'aide masquée...).
+ *
+ * Sans dépasser de l'écran : sur un petit écran (ou avec un fort zoom
+ * Windows), la fenêtre prend toute la hauteur disponible et son contenu
+ * défile (classe `scrolling`, voir styles.css), au lieu de cacher le bas
+ * sous la barre des tâches ou hors de l'écran.
  *
  * `ResizeObserver` est un « observateur » fourni par le navigateur : il
  * appelle notre fonction dès que la taille de l'élément observé change.
  */
-export function fitWindowToContent(root: HTMLElement, keepOnScreen = false): void {
+export function fitWindowToContent(root: HTMLElement): void {
   const fit = async () => {
     const { width, height } = root.getBoundingClientRect();
-    await setContentSize({ width, height });
-    if (keepOnScreen) await moveBackOnScreen();
+    const room = await roomOnScreen();
+    const { size, scroll } = room
+      ? fitWithin({ width, height }, room, measureScrollbar())
+      : { size: { width, height }, scroll: false };
+    document.documentElement.classList.toggle("scrolling", scroll);
+    await setContentSize(size);
+    await moveBackOnScreen();
   };
   new ResizeObserver(handler(fit)).observe(root);
 }
 
 /**
- * Si la fenêtre dépasse du bord droit ou du bas de son écran (par exemple
- * le bandeau collé dans le coin, qui s'élargit quand un personnage se
- * connecte), on la décale pour qu'elle reste entièrement visible.
+ * Si la fenêtre dépasse du bord droit ou du bas de la zone utile de son
+ * écran (par exemple le bandeau collé dans le coin, qui s'élargit quand un
+ * personnage se connecte), on la décale pour qu'elle reste entièrement
+ * visible, sans passer sous la barre des tâches.
  * Tout est en pixels physiques ici.
  */
 export async function moveBackOnScreen() {
@@ -352,11 +387,11 @@ export async function moveBackOnScreen() {
   if (!monitor) return;
   const position = await appWindow.outerPosition();
   const size = await appWindow.outerSize();
-  const right = monitor.position.x + monitor.size.width;
-  const bottom = monitor.position.y + monitor.size.height;
-  // `Math.min` : on recule si on dépasse ; `Math.max` : sans passer avant le bord gauche/haut.
-  const x = Math.max(monitor.position.x, Math.min(position.x, right - size.width));
-  const y = Math.max(monitor.position.y, Math.min(position.y, bottom - size.height));
+  const area = monitor.workArea;
+  const { x, y } = keepInside(
+    { x: position.x, y: position.y, width: size.width, height: size.height },
+    { x: area.position.x, y: area.position.y, width: area.size.width, height: area.size.height },
+  );
   if (x !== position.x || y !== position.y) {
     await appWindow.setPosition(new PhysicalPosition(x, y));
   }
